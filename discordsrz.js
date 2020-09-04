@@ -2,7 +2,7 @@
 
 var evg = new (require("./evg"))("srz")
 const guildID = "717160493088768020";
-const srzroles = ["SRZAdmin", "SRZBuilder"];
+const srzroles = ["Iron", "Gold", "Diamond", "Emerald", "Obsidian", "TNT", "Netherstar", "Bedrock"];
 
 function DiscordSRZ(client) {
 
