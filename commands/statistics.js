@@ -1,5 +1,4 @@
 var ping = require("minecraft-server-util");
-//var jayping = require("../jay-ping");
 var Command = require("../command");
 var Interface = require("../interface");
 
@@ -118,35 +117,26 @@ function logStatistics(client) {
 }
 
 //Scheduler automatically updates parts of the discord with minecraft/guild info and stats
-// function scheduler(client) {
-//     setInterval(() => {
+function scheduler(client) {
+    setInterval(() => {
 
-//         /*getServerInfo((info) => {
+        getServerInfo((info) => {
 
-//             var guild = client.guilds.find(g => g.id == "351824506773569541");
-//             var channel = guild.channels.find(c => c.id == "728978875538735144");
+            var guild = client.guilds.find(g => g.id == "717160493088768020");
+            var channel = guild ? guild.channels.find(c => c.id == "753387453108453457") : false;
+            var msg = false;
 
-//             channel.setName(`${info.players} ${info.players == 1 ? "person is" : "people are"}`).catch(console.error);
+            if (info && info.players) msg = `📊 ${info.players.online} ${info.players.online == 1 ? "person is" : "people are"} playing scav`;
 
-//         })*/
+            if (channel && msg && channel.name != msg) channel.setName(msg).catch(console.error);
 
-//         jayping.zhorde((info) => {
+        })
 
-//             var guild = client.guilds.find(g => g.id == "351824506773569541");
-//             var channel = guild ? guild.channels.find(c => c.id == "728978875538735144") : false;
-//             var msg = false;
-
-//             if (info && info.players) msg = `${info.players.online} ${info.players.online == 1 ? "person is" : "people are"}`;
-
-//             if (channel && msg && channel.name != msg) channel.setName(msg).catch(console.error);
-
-//         });
-
-//     }, 5 * 60 * 1000);
-// }
+    }, 5 * 60 * 1000);
+}
 
 module.exports = {
     command: stats,
-    logger: logStatistics
-    //scheduler: scheduler
+    logger: logStatistics,
+    scheduler: scheduler
 }
