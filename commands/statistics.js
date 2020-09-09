@@ -126,7 +126,7 @@ function scheduler(client) {
             var channel = guild ? guild.channels.find(c => c.id == "753387453108453457") : false;
             var msg = false;
 
-            if (info && info.players) msg = `📊 ${info.players.online} ${info.players.online == 1 ? "person is" : "people are"} playing scav`;
+            if (info && info.players) msg = `📊 ${info.players} ${info.players == 1 ? "person is" : "people are"} playing scav`;
 
             if (channel && msg && channel.name != msg) channel.setName(msg).catch(console.error);
 
