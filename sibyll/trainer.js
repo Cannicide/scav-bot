@@ -492,15 +492,17 @@ function Variables(obj) {
         if (hours < 12) {
             defVars.timechunk = "morning";
         }
-        else if (hours >= 12 && hours < 5) {
+        else if (hours >= 12 && hours < 17) {
             defVars.timechunk = "afternoon";
         }
-        else if (hours >= 5 && hours < 9) {
+        else if (hours >= 17 && hours < 21) {
             defVars.timechunk = "evening";
         }
         else {
             defVars.timechunk = "night";
         }
+
+        console.log(hours)
 
         if (("" + time.mins).length == 1) time.mins = "0" + time.mins;
 
