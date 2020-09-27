@@ -24,6 +24,8 @@ function Interpreter(message) {
 
             if (input == "" || input == " " || !input || input.startsWith("<@")) return;
 
+            input = input.replace(/\@everyone/gi, "[@]everyone").replace(/\@here/gi, "[@]here");
+
             sibyll.respond(input).then((output) => {
 
                 message.channel.send(output);
