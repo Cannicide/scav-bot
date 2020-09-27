@@ -1,0 +1,130 @@
+{
+    "choice:is-x-a-y": {
+        "iscustom": true,
+        "inputs": [
+            "is {a} a {b}?",
+            "is {a} like {b}?",
+            "is {a} not {b}?"
+        ],
+        "outputs": [
+            ["{a} is completely a {b}.", "{a} is absolutely not a {b}."],
+            ["{a} is like {b}.", "{a} is not at all like {b}."],
+            ["{a} is not {b}.", "{a} certainly is {b}."]
+        ]
+    },
+    "choice:are-x-y": {
+        "iscustom": true,
+        "inputs": [
+            "am I {a}?",
+            "are you {b}?"
+        ],
+        "outputs": [
+            ["Yes, you are {a}.", "Nah, you aren't {a}.", "You are absolutely {a}.", "You're definitely not {a}."],
+            ["Yep, I'm {b}.", "I'm not {b}.", "I'm absolutely {b}.", "I'm horrified that you think I'm {b}."]
+        ]
+    },
+    "choice:should-x-do-y": {
+        "iscustom": true,
+        "inputs": [
+            "should I {a}?",
+            "should he {a}?",
+            "should she {a}?",
+            "should they {a}?",
+            "should you {a}?",
+            "should we {a}?",
+            "should y'all {a}?"
+        ],
+        "outputs": [
+            "Yes, {b} should {a}.",
+            "No, {b} shouldn't {a}.",
+            "Yeah, {b} should absolutely {a}.",
+            "Nah, {b} should NEVER {a}."
+        ]
+    },
+    "choice:would-you-rather": {
+        "iscustom": true,
+        "inputs": [
+            "would you rather {a} or {b}?"
+        ],
+        "outputs": [
+            "I would rather {a}.",
+            "I would rather {b}."
+        ]
+    },
+    "choice:choose-between": {
+        "iscustom": true,
+        "inputs": [
+            "choose {a} or {b}",
+            "{a} or {b}?",
+            "decide {a} or {b}"
+        ],
+        "outputs": [
+            "I prefer {a}.",
+            "I choose {b}.",
+            "I'd go with {a}.",
+            "I prefer {b}."
+        ]
+    },
+    "choice:which-is-better": {
+        "iscustom": true,
+        "inputs": [
+            "which is better: {a} or {b}?",
+            "is {a} better than {b}?"
+        ],
+        "outputs": [
+            "Well, {a} is better than {b}.",
+            "Hmm, {b} is probably better than {a}."
+        ]
+    },
+    "choice:do-you": {
+        "iscustom": true,
+        "inputs": [
+            "do you {a}?"
+        ],
+        "outputs": [
+            "Yes, I {a}.",
+            "No, I don't {a}."
+        ]
+    },
+    "choice:will-you-x-me": {
+        "iscustom": true,
+        "inputs": [
+            "will you {a} me?",
+            "would you {a} me?",
+            "can you {a} me?",
+            "could you {a} me?"
+        ],
+        "outputs": [
+            "Absolutely, I {prep} {a} you.",
+            "No. I {prep} not {a} you.",
+            "Yeah, I guess I {prep} {a} you.",
+            "NEVER. I {prep} not {a} you."
+        ]
+    },
+    "choice:will-you-be-my-x": {
+        "iscustom": true,
+        "inputs": [
+            "will you be my {a}?",
+            "would you be my {a}?",
+            "can you be my {a}?",
+            "could you be my {a}?"
+        ],
+        "outputs": [
+            "Absolutely, I {prep} be your {a}.",
+            "Nah, I {prep} not be your {a}.",
+            "Definitely! I {prep} be your {a}.",
+            "I {prep} NEVER be your {a}."
+        ]
+    },
+    "choice:will-x-be-y": {
+        "iscustom": true,
+        "inputs": [
+            "will {b} be {a}?",
+            "will {b} get {a}?"
+        ],
+        "outputs": [
+            "Absolutely, {b} will {inter} {a}.",
+            "Nope, {b} will not {inter} {a}."
+        ]
+    }
+}

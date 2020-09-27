@@ -1,0 +1,48 @@
+{
+    "ref:meaning-of-life": {
+        "iscustom": true,
+        "inputs": [
+            "what is {a} of life?",
+            "what is {a} of 42?",
+            "what is {a} to life?",
+            "what is {a} to 42?"
+        ],
+        "outputs": [
+            "Obviously, {a} of life is 42.",
+            "The answer to life, the universe, and everything is 42."
+        ]
+    },
+    "ref:what-is-love": {
+        "iscustom": true,
+        "inputs": [
+            "what is love?"
+        ],
+        "outputs": [
+            "Baby don't hurt me, don't hurt me, no more."
+        ]
+    },
+    "ref:no-u": {
+        "iscustom": true,
+        "inputs": [
+            "no u",
+            "no you",
+            "no w",
+            "uno reverse"
+        ],
+        "outputs": [
+            "No u",
+            "Uno reverse",
+            "No w"
+        ]
+    },
+    "ref:hasta-la-vista": {
+        "iscustom": true,
+        "inputs": [
+            "hasta",
+            "hasta {a}"
+        ],
+        "outputs": [
+            "Hasta la vista, baby."
+        ]
+    }
+}

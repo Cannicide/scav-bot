@@ -1,6 +1,7 @@
 //A non-command system to interpret messages that are not commands and auto-respond/auto-react if necessary
 
 //var report = require("./commands/report");
+var sibyll = require("./sibyll/sibyll");
 
 function Interpreter(message) {
 
@@ -16,7 +17,22 @@ function Interpreter(message) {
                 message.react("713053971211878452");
             }, 100);
             
-        } /*
+        }
+        //Sibyll mention response:
+        else if (message.mentions.members.first() && message.mentions.members.first().id == "751503579457519656") {
+            var input = message.content.substring(message.content.indexOf(" ") + 1);
+
+            if (input == "" || input == " " || !input || input.startsWith("<@")) return;
+
+            sibyll.respond(input).then((output) => {
+
+                message.channel.send(output);
+
+            });
+
+        }
+        
+        /*
         //Bug Colon system:
         else if (args[0].toLowerCase().match("bug:") && message.channel.name.toLowerCase().match("bug")) {
             report.colon(message, args, "Bugs");
