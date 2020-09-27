@@ -354,7 +354,7 @@ function Trainer() {
                             var inter = input.split("} ", 2)[1].split(" {", 2)[0];
 
                             if (b == "i") b = "you";
-                            if (b == "you" || b == "u") b = "I";
+                            else if (b == "you" || b == "u") b = "I";
 
                             variables.set("a", a);
                             variables.set("b", b);
@@ -385,6 +385,10 @@ function Trainer() {
                                 Object.keys(output).forEach(key => {
                                     //Format spaces
                                     output[key] = output[key].replace(/ /g, "+");
+
+                                    if (output[key] == "i") output[key] = "you";
+                                    else if (output[key] == "you" || output[key] == "u") output[key] = "I";
+
                                     variables.set(key, output[key]);
                                 });
 
@@ -414,6 +418,10 @@ function Trainer() {
                             //Is an input
 
                                 Object.keys(output).forEach(key => {
+
+                                    if (output[key] == "i") output[key] = "you";
+                                    else if (output[key] == "you" || output[key] == "u") output[key] = "I";
+
                                     variables.set(key, output[key]);
                                 });
 
