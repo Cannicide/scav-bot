@@ -3,8 +3,8 @@
         <title>Scav Bot | Statistics</title>
 		<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
 		<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
-		<link rel="icon" type="image/x-icon" href="https://media.discordapp.net/attachments/668486291033292801/668486641572118561/ZHBotServer.png" />
-		<meta content="https://media.discordapp.net/attachments/668486291033292801/668486641572118561/ZHBotServer.png" property="og:image" /> 
+		<link rel="icon" type="image/x-icon" href="https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png" />
+		<meta content="https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png" property="og:image" /> 
 		<link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/overcast/jquery-ui.css" />
 		<meta name="description" content="Graphical representations of Scav discord and minecraft statistics compiled every hour since 6/17/2020 by the Scav Discord Bot." />
 		<meta property="og:description" content="Graphical representations of Scav discord and minecraft statistics compiled every hour since 6/17/2020 by the Scav Discord Bot." />
@@ -20,7 +20,7 @@
             }
 
             div.chart-container {
-                margin-top: -25%;
+                margin-top: -28%;
             }
 
             div.credit {
@@ -122,9 +122,9 @@
             Created by Cannicide#2753
         </div>
         <div class="leftside">
-            <img id="info-icon" src="https://cdn.glitch.com/71f6d3c6-0b04-4012-9c67-afb1f4a20d07%2Finfo-icon.png?v=1597004879028"> <p id="rawjson">View raw JSON data <a href="https://zh-bot.glitch.me/statistics/json" target="_blank">here</a></p>
+            <img id="info-icon" src="https://cdn.glitch.com/71f6d3c6-0b04-4012-9c67-afb1f4a20d07%2Finfo-icon.png?v=1597004879028"> <p id="rawjson">View raw JSON data <a href="https://scav-bot.glitch.me/statistics/json" target="_blank">here</a></p>
         </div>
-        <img class="logo" src="https://media.discordapp.net/attachments/668486291033292801/668486641572118561/ZHBotServer.png" onclick="location.href = 'https:/' + '/zh-bot.glitch.me/statistics';" />
+        <img class="logo" src="https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png" onclick="location.href = 'https:/' + '/scav-bot.glitch.me/statistics';" />
     </body>
     <script>
         //Get current date:
@@ -259,15 +259,15 @@
                     data: {
                         labels: labels,
                         datasets: [
+                            (statsmode == 1 || statsmode == 2 ? {
+                                label: "# Minecrafters Online",
+                                data: mcOnline,
+                                backgroundColor: "#f0932b"
+                            } : {}),
                             (statsmode == 0 || statsmode == 1 ? {
                                 label: "# Discorders Online",
                                 data: discOnline,
                                 backgroundColor: "#7289DA"
-                            } : {}),
-                            (statsmode == 1 || statsmode == 2 ? {
-                                label: "# Minecrafters Online",
-                                data: mcOnline,
-                                backgroundColor: "limegreen"
                             } : {})
                         ]
                     },
@@ -277,8 +277,8 @@
                             enabled: true,
                             callbacks: {
                                 label: (tooltipItem, data) => {
-                                    var resp = [tooltipItem.value + (tooltipItem.datasetIndex == 0 ? " Discorders" : " Minecrafters")];
-                                    if (tooltipItem.datasetIndex == 0) {
+                                    var resp = [tooltipItem.value + (tooltipItem.datasetIndex == 1 ? " Discorders" : " Minecrafters")];
+                                    if (tooltipItem.datasetIndex == 1) {
                                         resp.push(discPercent[tooltipItem.index] + "% Online");
                                         resp.push(totalDisc[tooltipItem.index] + " Total Members");
                                     }
@@ -358,15 +358,15 @@
                     data: {
                         labels: labels,
                         datasets: [
+                            (statsmode == 1 || statsmode == 2 ? {
+                                label: "# Minecrafters Online",
+                                data: mcOnline,
+                                backgroundColor: "#f0932b"
+                            } : {}),
                             (statsmode == 0 || statsmode == 1 ? {
                                 label: "# Discorders Online",
                                 data: discOnline,
                                 backgroundColor: "#7289DA"
-                            } : {}),
-                            (statsmode == 1 || statsmode == 2 ? {
-                                label: "# Minecrafters Online",
-                                data: mcOnline,
-                                backgroundColor: "limegreen"
                             } : {})
                         ]
                     },
@@ -376,8 +376,8 @@
                             enabled: true,
                             callbacks: {
                                 label: (tooltipItem, data) => {
-                                    var resp = [tooltipItem.value + (tooltipItem.datasetIndex == 0 ? " Discorders" : " Minecrafters")];
-                                    if (tooltipItem.datasetIndex == 0) {
+                                    var resp = [tooltipItem.value + (tooltipItem.datasetIndex == 1 ? " Discorders" : " Minecrafters")];
+                                    if (tooltipItem.datasetIndex == 1) {
                                         resp.push(discPercent[tooltipItem.index] + "% Online");
                                         resp.push(totalDisc[tooltipItem.index] + " Total Members");
                                     }
@@ -483,15 +483,15 @@
                     data: {
                         labels: labels,
                         datasets: [
+                            (statsmode == 1 || statsmode == 2 ? {
+                                label: "# Minecrafters Online",
+                                data: mcOnline,
+                                backgroundColor: "#f0932b"
+                            } : {}),
                             (statsmode == 0 || statsmode == 1 ? {
                                 label: "# Discorders Online",
                                 data: discOnline,
                                 backgroundColor: "#7289DA"
-                            } : {}),
-                            (statsmode == 1 || statsmode == 2 ? {
-                                label: "# Minecrafters Online",
-                                data: mcOnline,
-                                backgroundColor: "limegreen"
                             } : {})
                         ]
                     },
@@ -501,8 +501,8 @@
                             enabled: true,
                             callbacks: {
                                 label: (tooltipItem, data) => {
-                                    var resp = [tooltipItem.value + (tooltipItem.datasetIndex == 0 ? " Discorders" : " Minecrafters")];
-                                    if (tooltipItem.datasetIndex == 0) {
+                                    var resp = [tooltipItem.value + (tooltipItem.datasetIndex == 1 ? " Discorders" : " Minecrafters")];
+                                    if (tooltipItem.datasetIndex == 1) {
                                         resp.push(discPercent[tooltipItem.index] + "% Online");
                                         resp.push(totalDisc[tooltipItem.index] + " Total Members");
                                     }

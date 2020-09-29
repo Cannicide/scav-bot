@@ -2,7 +2,7 @@ var ping = require("minecraft-server-util");
 var Command = require("../command");
 var Interface = require("../interface");
 
-function getServerInfo(callback) {
+function getServerInfo(callback, err) {
 
     var info = {
         players: 0,
@@ -12,13 +12,14 @@ function getServerInfo(callback) {
 
     ping("server.scav.tv", 25565)
         .then((response) => {
-            info.players = response.getPlayersOnline();
-            info.icon = response.getFavicon();
-            info.version = response.getVersion();
+            info.players = response.onlinePlayers;
+            info.icon = response.favicon;
+            info.version = response.version;
             return callback(info);
         })
         .catch((error) => {
             console.log(error);
+            if (err) err();
         });
 }
 
@@ -41,10 +42,19 @@ var stats = new Command("statistics", (message, args) => {
             }
         ]);
 
+        embed.embed.description = "View all statistics [here](https://scav-bot.glitch.me/statistics)";
+
         embed.embed.title = "**Statistics**";
         message.channel.send(embed);
 
         //message.channel.send("**Statistics**\n\nPlayers Online: " + info.players + "\nVersion: " + "1.8.x-1.12.x");//info.version);
+
+    }, (err) => {
+
+        let embed = new Interface.Embed(message, message.guild.iconURL, [], "The server appears to be down.\nView all statistics [here](https://scav-bot.glitch.me/statistics)");
+
+        embed.embed.title = "**Statistics**";
+        message.channel.send(embed);
 
     });
 
