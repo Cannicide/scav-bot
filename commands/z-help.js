@@ -13,7 +13,15 @@ module.exports = {
             var embed;
             var thumb = "https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png";
 
+            var isFull = false;
+            var pages = [];
+            var pageIndex = 0;
+
             function fullList() {
+                isFull = true;
+                var insertions = 0;
+                var page = [];
+
                 cmds.forEach((item) => {
                     if (!item.special) {
                         var res = {
@@ -38,11 +46,22 @@ module.exports = {
                             res.value += "```\n** **";
                         }
                         res.inline = true;
-                        fields.push(res);
+                        //fields.push(res);
+
+                        insertions++;
+
+                        page.push(res);
+                        if (insertions == 2) {
+                            pages.push(page);
+                            page = [];
+                            insertions = 0;
+                        }
                     }
                 });
+                
+                if (pages[pages.length - 1] != page && page.length != 0) pages.push(page);
 
-                embed = new Interface.Embed(message, thumb, fields);
+                embed = new Interface.Embed(message, thumb, pages[pageIndex]);
                 embed.embed.title = "**Commands**";
                 embed.embed.description = "Scavenger is the official ScavengerCraft Discord Bot, created by Cannicide#2753 (JayCraft2)."
             }
@@ -89,7 +108,45 @@ module.exports = {
             }
 
 
-            message.channel.send(embed);
+            if (!isFull) message.channel.send(embed);
+            else {
+                message.channel.send(embed).then((m) => {
+                    m.react("⬅️").then(r => m.react("➡️"));
+
+                    let forwardsFilter = m.createReactionCollector((reaction, user) => reaction.emoji.name === '➡️' && user.id === message.author.id, { time: 120000 });
+                    let backFilter = m.createReactionCollector((reaction, user) => reaction.emoji.name === '⬅️' && user.id === message.author.id, { time: 120000 });
+                
+                    forwardsFilter.on("collect", r => {
+                        r.remove(message.author);
+
+                        pageIndex++;
+
+                        if (pageIndex > pages.length - 1) {
+                            pageIndex = pages.length - 1;
+                        }
+                        else {
+                            embed.embed.fields = pages[pageIndex];
+                            m.edit(embed);
+                        }
+
+                    });
+
+                    backFilter.on("collect", r => {
+                        r.remove(message.author);
+
+                        pageIndex--;
+
+                        if (pageIndex < 0) {
+                            pageIndex = 0;
+                        }
+                        else {
+                            embed.embed.fields = pages[pageIndex];
+                            m.edit(embed);
+                        }
+
+                    });
+                });
+            }
 
         }, false, false, "Gets a list of all commands, parameters, and their descriptions. Format: [optional] parameters, <required> parameters.").attachArguments([
             {
