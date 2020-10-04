@@ -3,6 +3,7 @@
 
 var Command = require("../command");
 var Interface = require("../interface");
+var Alias = require("../alias");
 
 module.exports = {
     commands: [
@@ -11,12 +12,20 @@ module.exports = {
             let thumb = "https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png";
             var embed = new Interface.Embed(message, thumb, [
                 {
-                    name: "Player Stats and Leaderboards",
-                    value: `You can view the stats of players who have linked their minecraft and discord accounts, ordered by balance and more, [here](${statsLink}). To add yourself to this leaderboards page, link your account using the in-game command '/discord link'.`
+                    name: "Stats and Leaderboards",
+                    value: `View the stats of players who have linked their minecraft and discord accounts, ordered by balance and more, [here](${statsLink}).`
+                },
+                {
+                    name: "Joining the Board",
+                    value: `To add yourself to this leaderboards page, link your account using the in-game command '/discord link'.`
+                },
+                {
+                    name: "Updating the Stats",
+                    value: `Your stats are automatically updated whenever you join the server, as well as when you first link your accounts.`
                 }
             ]);
 
-            embed.embed.title = "Ban Appeals";
+            embed.embed.title = "Player Statistics";
 
             message.channel.send(embed);
 
