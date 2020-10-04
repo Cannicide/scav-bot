@@ -22,6 +22,14 @@ function setup(app, disc) {
   app.get("/statistics/", (req, res) => {
       res.sendFile(__dirname + "/views/statistics.html");
   })
+
+  app.get("/userstats/json", (req, res) => {
+    res.sendFile(__dirname + "/storage/srz.json");
+  });
+
+  app.get("/userstats/", (req, res) => {
+    res.sendFile(__dirname + "/views/userstats.html");
+  });
   
   app.use(bodyParser.json());
   

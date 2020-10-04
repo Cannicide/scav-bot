@@ -1,0 +1,442 @@
+<html>
+    <head>
+        <title>Scav Bot | Player Stats</title>
+		<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+		<link rel="icon" type="image/x-icon" href="https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png" />
+		<meta content="https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png" property="og:image" /> 
+		<meta name="description" content="Player stats for users who have linked their minecraft and discord accounts." />
+		<meta property="og:description" content="Player stats for users who have linked their minecraft and discord accounts." />
+		<meta property="og:title" content="Scav Bot | Player Stats" />
+        <meta property="og:url" content="https://scav-bot.glitch.me/userstats" />
+        <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/pure-min.css" />
+        <style>
+            @import url(https://fonts.googleapis.com/css?family=Audiowide);
+
+            a {
+                color: #e91e63;
+            }
+
+            .fac-name {
+                color: goldenrod;
+            }
+
+            .fac-content {
+                color: green;
+            }
+
+            body {
+                background: url(https://cdn.glitch.com/259e4cb5-1c14-405f-a487-3a6ff17495e4%2Fbg.png?v=1597863911891), #320F0E;
+                color: #bbb;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            p {
+                text-align: center;
+            }
+
+            h2 {
+                font-family: "Audiowide", Arial;
+                color: #e91e63;
+                font-size: 30pt;
+                margin-bottom: 15px;
+            }
+
+            table {
+                color: #333;
+            }
+
+            tbody > tr {
+                background: white;
+            }
+
+            /*== start of code for tooltips ==*/
+            *[data-tip] {
+                cursor: help;
+                position: relative;
+            }
+
+
+            /*== common styles for both parts of tool tip ==*/
+            *[data-tip]::before,
+            *[data-tip]::after {
+                left: 50%;
+                opacity: 0;
+                position: absolute;
+                z-index: -100;
+            }
+
+            *[data-tip]:hover::before,
+            *[data-tip]:focus::before,
+            *[data-tip]:hover::after,
+            *[data-tip]:focus::after {
+                opacity: 1;
+                z-index: 100; 
+            }
+
+            *[data-tip]:hover::before,
+            *[data-tip]:focus::before{
+                transform: scale(1) translateY(90%);
+            }
+
+            *[data-tip]:hover::after,
+            *[data-tip]:focus::after {
+                transform: scale(1) translateY(0);
+            }
+
+
+            /*== pointer tip ==*/
+            *[data-tip]::before {
+                border-style: solid;
+                border-width: 1em 0.75em 0 0.75em;
+                border-color: #3E474F transparent transparent transparent;
+                bottom: 200%;
+                content: "";
+                margin-left: -0.5em;
+                transition: all .65s cubic-bezier(.84,-0.18,.31,1.26), opacity .65s .5s;
+                transform: scale(.6) translateY(-90%);
+            } 
+
+            *[data-tip]:hover::before,
+            *[data-tip]:focus::before {
+                transition: all .65s cubic-bezier(.84,-0.18,.31,1.26) .2s;
+            }
+
+
+            /*== speech bubble ==*/
+            *[data-tip]::after {
+                background: #3E474F;
+                border-radius: .25em;
+                bottom: 200%;
+                color: #EDEFF0;
+                content: attr(data-tip);
+                margin-left: -8.75em;
+                padding: 1em;
+                transition: all .65s cubic-bezier(.84,-0.18,.31,1.26) .2s;
+                transform: scale(.6) translateY(50%);  
+                width: 17.5em;
+                white-space: pre;
+                word-wrap: break-word;
+            }
+
+            *[data-tip]:hover::after,
+            *[data-tip]:focus::after  {
+                transition: all .65s cubic-bezier(.84,-0.18,.31,1.26);
+            }
+
+            @media (max-width: 760px) {
+                *[data-tip]::after { 
+                        font-size: .75em;
+                        margin-left: -5em;
+                        width: 10em; 
+                }
+            }
+
+            /* INFO ICON */
+            #info-icon {
+                width: 25px;
+                height: 25px;
+            }
+
+            #rawjson {
+                opacity: 0;
+                transition: 3s ease all;
+                margin-left: 5px;
+            }
+
+            div.leftside {
+                position: fixed; bottom: -5px;
+                left: 5px;
+                font-size: 12pt;
+                color: #999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: row;
+            }
+
+            div.leftside > p {
+                cursor: default;
+            }
+
+            div.leftside:hover #rawjson {
+                opacity: 1;
+            }
+
+            /* Display types */
+
+            .selected-display, *[disp] {
+                position: relative;
+            }
+
+            *[disp] {
+                cursor: pointer;
+            }
+
+            .selected-display {
+                cursor: default;
+            }
+
+            .selected-display::before, *[disp]:hover::before {
+                position: absolute;
+                top: 50%;
+                right: 5px;
+                transform: translateY(-50%);
+                content: '▼';
+                font-size: 8pt;
+            }
+
+            /* Player avatars */
+            .img-td > img {
+                width: 25px;
+                height: 25px;
+                margin-right: 8px;
+            }
+
+            td .img-td {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            /* Credits */
+            div.credit {
+                position: fixed; bottom: 5px;
+                right: 5px;
+                font-size: 12pt;
+                color: #999;
+                cursor: default;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Player Stats</h2>
+        <p>Only players who have linked their minecraft and discord accounts will appear here.<br>
+        Use <a tabindex="-1" data-tip="• Type `/discord link`&#13;&#10;• You are given a 5-digit code&#13;&#10;• Send it to Scavenger discord bot&#13;&#10;• You are now linked!">/discord link</a> in Minecraft and follow the instructions to link your accounts.</p>
+        <table class="pure-table pure-table-striped">
+            <thead>
+                <tr>
+                    <th disp="name">Player</th>
+                    <th disp="balance">Balance</th>
+                    <th disp="kills">Kills</th>
+                    <th disp="deaths">Deaths</th>
+                    <th disp="rank">Rank</th>
+                    <th>Faction</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Sample name</td>
+                    <td>Sample bal</td>
+                    <td>Sample kills</td>
+                    <td>Sample deaths</td>
+                    <td>Sample rank</td>
+                    <td>Sample fac</td>
+                </tr>
+                <tr>
+                    <td>Sample name 2</td>
+                    <td>Sample bal 2</td>
+                    <td>Sample kills 2</td>
+                    <td>Sample deaths 2</td>
+                    <td>Sample rank 2</td>
+                    <td>Sample fac 2</td>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+        <div class="leftside">
+            <img id="info-icon" src="https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png">&nbsp;<p id="rawjson"><a href="/" target="_blank">Scavenger Bot Homepage</a> | <a href="https://scavengercraft.net/" target="_blank">ScavengerCraft Forums</a></p>
+        </div>
+        <div class="credit">
+            Created by <a data-tip="IGN: JayCraft2" tabindex="-1">Cannicide#2753</a>
+        </div>
+    </body>
+    <script>
+
+        var dataurl;
+
+        if (location.href.startsWith("https")) dataurl = "https://scav-bot.glitch.me/userstats/json";
+        else dataurl = "http://scav-bot.glitch.me/userstats/json";
+
+        var databy = {
+            balance: [],
+            name: [],
+            kills: [],
+            deaths: [],
+            rank: []
+        }
+
+        function fetchData() {
+
+            $("tbody").html("");
+
+            $.ajax({
+                url: dataurl,
+                cache: false
+            }).done((stats) => {
+
+                stats.forEach((player) => {
+                    if (!player.discord) return;
+
+                    var data = player.data;
+
+                    var roles = data.sync;
+                    var placeholders = data.placeholders;
+
+                    //Get player and faction data for table
+                    var name, bal, kills, deaths, rank, faction = {};
+
+                    if (placeholders.length <= 1) {
+                        // name = "Unknown";
+                        // bal = "Unknown";
+                        // kills = "Unknown";
+                        // deaths = "Unknown";
+                        // rank = "Unknown";
+                        // faction.name = "Unknown";
+                        // faction.role = "Unknown";
+                        // faction.power = "Unknown";
+                        // faction.maxpower = "Unknown";
+                        // faction.claims = "Unknown";
+
+                        return;
+                    }
+                    else {
+                        name = placeholders[0];
+                        bal = placeholders[1];
+                        kills = placeholders[2];
+                        deaths = placeholders[3];
+
+                        rank = roles.length == 0 ? "Member" : roles[roles.length - 1];
+                        faction.role = placeholders[4] + placeholders[5];
+                        faction.name = placeholders[6];
+                        faction.power = placeholders[7];
+                        faction.maxpower = placeholders[8];
+                        faction.claims = placeholders[9];
+                    }
+
+                    //Append data to table
+                    var toappend = (`<tr>
+                        <td><div class='img-td'><img src="https://cannicideapi.glitch.me/mc/avatar/${name}" /> ${name}</div></td>
+                        <td>$${bal}</td>
+                        <td>${kills} kills</td>
+                        <td>${deaths} deaths</td>
+                        <td>${rank} rank</td>
+                        <td>
+                            <a tabindex="-1" class="fac-name" data-tip="Role: ${faction.role}&#13;&#10;Land/Power/Max: ${faction.claims}/${faction.power}/${faction.maxpower}">${faction.name}</a>
+                        </td>
+                    </tr>`);
+
+                    databy.balance.push({value: bal, append: toappend});
+                    databy.kills.push({value: kills, append: toappend});
+                    databy.deaths.push({value: deaths, append: toappend});
+                    databy.name.push({value: name, append: toappend});
+                    databy.rank.push({value: rank, append: toappend});
+
+                });
+
+                //Sort by name
+                databy.name.sort(function(a, b){
+                    return a.value.localeCompare(b.value);
+                });
+
+                //Sort by rank
+                var ranks = ["Iron", "Gold", "Diamond", "Emerald", "Obsidian", "TNT", "Netherstar", "Bedrock"];
+                databy.rank.sort(function(a, b){
+                    var index1 = ranks.indexOf(a.value);
+                    var index2 = ranks.indexOf(b.value);
+
+                    if(index1 > index2) { return -1; }
+                    if(index1 < index2) { return 1; }
+                    return 0;
+                })
+
+                //Sort by balance
+                databy.balance.sort(function(a, b){
+
+                    var x, y;
+
+                    if (a.value.match(".")) x = a.value.split(".")[0];
+                    if (b.value.match(".")) y = b.value.split(".")[0];
+
+                    x = Number(x.replace(/,/g, ""));
+                    y = Number(y.replace(/,/g, ""));
+
+                    if(x > y) { return -1; }
+                    if(x < y) { return 1; }
+                    return 0;
+                });
+
+                //Sort by kills
+                databy.kills.sort(function(a, b){
+                    a = Number(a.value);
+                    b = Number(b.value);
+
+                    if(a > b) { return -1; }
+                    if(a < b) { return 1; }
+                    return 0;
+                })
+
+                //Sort by deaths
+                databy.deaths.sort(function(a, b){
+                    a = Number(a.value);
+                    b = Number(b.value);
+
+                    if(a > b) { return -1; }
+                    if(a < b) { return 1; }
+                    return 0;
+                });
+
+                //Now everything is sorted.
+                //So do default display:
+                displayBy("balance");
+
+            });
+
+        }
+
+        fetchData();
+
+        function displayBy(type) {
+            $("tbody").html("");
+
+            databy[type].forEach((item) => {
+                $("tbody").append(item.append);
+            });
+
+            //Set sorter to selected
+            $(".selected-display").removeClass("selected-display");
+            $(`*[disp="${type}"]`).addClass("selected-display");
+
+            //Register avatar to head easter egg
+            registerClickEgg();
+
+        }
+
+        // Click to sort:
+        $("*[disp]").click((e) => {
+            displayBy($(e.currentTarget).attr("disp"));
+        })
+
+        //Avatar to head conversion easter egg:
+        function registerClickEgg() {
+            $(".img-td img").click((e) => {
+                console.log("test")
+
+                var attr = $(e.currentTarget).attr("src");
+
+                if (attr.match("/avatar/")) {
+                    //Set to head:
+                    attr = attr.replace("/avatar/", "/head/");
+                }
+                else {
+                    //Set to avatar:
+                    attr = attr.replace("/head/", "/avatar/");
+                }
+
+                $(e.currentTarget).attr("src", attr);
+            });
+        }
+
+    </script>
+</html>
