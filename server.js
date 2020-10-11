@@ -33,6 +33,10 @@ var statistics = require("./commands/statistics");
 statistics.logger(client);
 statistics.scheduler(client);
 
+var moderation = require("./commands/moderation");
+moderation.moderation.keepPermabanned(client);
+moderation.moderation.keepMuted(client);
+
 client.on('guildCreate', guild => {
     var guildX = client.guilds.get("668485643487412234");
     guildX.channels.get(guildX.channels.find(c => c.name == "logs").id).send("Scav Discord Bot was added to the guild: " + guild.name);
