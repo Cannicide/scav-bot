@@ -11,7 +11,7 @@ function DiscordSRZ(client) {
             return msg;
         }
 
-        client.guilds.get("668485643487412234").channels.find(c => c.name == "private-logs").send(msg);
+        client.guilds.cache.get("668485643487412234").channels.cache.find(c => c.name == "private-logs").send(msg);
     }
 
     function sync(data) {
@@ -84,13 +84,13 @@ function DiscordSRZ(client) {
      */
     function DiscordAction(isunsync) {
 
-        var guild = client.guilds.get(guildID);
+        var guild = client.guilds.cache.get(guildID);
         var db = evg.get();
 
         db.forEach((user) => {
             if (user.discord) {
                 //User is linked
-                var member = guild.members.find(m => m.id == user.discord);
+                var member = guild.members.cache.find(m => m.id == user.discord);
 
                 if (member) {
                     //Member exists
@@ -100,38 +100,38 @@ function DiscordSRZ(client) {
 
                     if (isunsync && user.code == -1) {
                         //Unsync/remove roles
-                        var roles = member.roles.array();
+                        var roles = member.roles.cache.array();
 
                         roles.forEach((role) => {
                             if (user.data.sync.includes(role.name)) {
                                 //Role is specified in user data as a role to sync, so remove it
-                                member.removeRole(role, "DiscordSRZ desynchronization due to unlink.");
+                                member.roles.remove(role, "DiscordSRZ desynchronization due to unlink.");
                             }
                             else if (role.name.toLowerCase() == "verified") {
-                                member.removeRole(role, "DiscordSRZ unlinked.");
+                                member.roles.remove(role, "DiscordSRZ unlinked.");
                             }
                             else if (srzroles.includes(role.name)) {
-                                  if (member.roles.find(r => r.name == role.name)) {
-                                    member.removeRole(role, "DiscordSRZ synchronization.");
+                                  if (member.roles.cache.find(r => r.name == role.name)) {
+                                    member.roles.remove(role, "DiscordSRZ synchronization.");
                                   }
                               }
                         });
                     }
                     else if (!isunsync) {
                         //Sync/add roles
-                        var roles = guild.roles.array();
+                        var roles = guild.roles.cache.array();
 
                         roles.forEach((role) => {
                             if (user.data.sync.includes(role.name)) {
-                                //Role is specified in user data as a role to sync, so remove it
-                                member.addRole(role, "DiscordSRZ synchronization.");
+                                //Role is specified in user data as a role to sync, so add it
+                                member.roles.add(role, "DiscordSRZ synchronization.");
                             }
                             else if (role.name.toLowerCase() == "verified") {
-                                member.addRole(role, "DiscordSRZ linked.");
+                                member.roles.add(role, "DiscordSRZ linked.");
                             }
                             else if (srzroles.includes(role.name)) {
-                                if (member.roles.find(r => r.name == role.name)) {
-                                  member.removeRole(role, "DiscordSRZ synchronization.");
+                                if (member.roles.cache.find(r => r.name == role.name)) {
+                                  member.roles.remove(role, "DiscordSRZ synchronization.");
                                 }
                             }
                         });
@@ -172,6 +172,8 @@ function DiscordSRZ(client) {
 
     function CodeLink(code, message) {
         var db = evg.get();
+      
+      console.log(db);
 
         if (db.find(m => m.code == code) && !db.find(m => m.code == code).discord) {
             //Code exists, pair minecraft with discord

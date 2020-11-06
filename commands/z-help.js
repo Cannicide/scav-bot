@@ -117,7 +117,7 @@ module.exports = {
                     let backFilter = m.createReactionCollector((reaction, user) => reaction.emoji.name === '⬅️' && user.id === message.author.id, { time: 120000 });
                 
                     forwardsFilter.on("collect", r => {
-                        r.remove(message.author);
+                        r.users.remove(message.author);
 
                         pageIndex++;
 
@@ -132,7 +132,7 @@ module.exports = {
                     });
 
                     backFilter.on("collect", r => {
-                        r.remove(message.author);
+                        r.users.remove(message.author);
 
                         pageIndex--;
 

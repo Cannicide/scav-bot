@@ -45,13 +45,13 @@ module.exports = {
                 if (!filters.includes(filter)) return message.channel.send("Please specify a valid filter.\nFilters include: Grayscale, Blur, Inverted, Deepfried, Sepia, Pixelated, Halloween, and HalloweenInverted.");
                 if (filter.startsWith("halloween")) url = `https://cannicideapi.glitch.me/memes/`;
 
-                var user = message.guild.members.find(m => m.user.tag == name);
+                var user = message.guild.members.cache.find(m => m.user.tag == name);
 
                 if (!user) {
                     message.channel.send("Could not find a user with the tag: " + name);
                 }
                 else {
-                    url += `${filter.match("invert") && filter.match("halloween") ? "halloween" : filter}?image=${user.user.displayAvatarURL}`;
+                    url += `${filter.match("invert") && filter.match("halloween") ? "halloween" : filter}?image=${user.user.displayAvatarURL() + "?size=256"}`;
 
                     if (filter.match("invert") && filter.match("halloween")) url += `&inverse=true`;
 
@@ -69,7 +69,7 @@ module.exports = {
                 if (!filters.includes(filter)) return message.channel.send("Please specify a valid filter.\nFilters include: Grayscale, Blur, Inverted, Deepfried, Sepia, Pixelated, Halloween, and HalloweenInverted.");
                 if (filter.startsWith("halloween")) url = `https://cannicideapi.glitch.me/memes/`;
 
-                url += `${filter.match("invert") && filter.match("halloween") ? "halloween" : filter}?image=${message.author.displayAvatarURL}`;
+                url += `${filter.match("invert") && filter.match("halloween") ? "halloween" : filter}?image=${message.author.displayAvatarURL() + "?size=256"}`;
 
                 if (filter.match("invert") && filter.match("halloween")) url += `&inverse=true`;
 

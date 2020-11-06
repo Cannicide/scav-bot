@@ -1,6 +1,6 @@
 //A command to allow players to appeal their bans, showing them the proper way of doing so
 /*Ban appeal creation:*/ const banThread = "https://scavengercraft.net/forums/ban-appeals.17/create-thread?title=_%27s+Ban+Appeal"
-/*Ban appeal format:*/ const banFormat = "https://scavengercraft.net/threads/how-to-appeal-a-ban.876/#post-3058";
+/*Ban appeal format:*/ const banFormat = "https://scavengercraft.net/threads/ban-appeal-format.1000/";
 
 var Command = require("../command");
 var Interface = require("../interface");

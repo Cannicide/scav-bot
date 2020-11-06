@@ -113,7 +113,7 @@ function Command(name, method, permissions, invisible, desc) {
                 }
                 if ("roles" in permissions) {
                     permissions.roles.forEach((item) => {
-                        if (member.roles.find(x => x.name == item)) {
+                        if (member.roles.cache.find(x => x.name == item)) {
                             hasRoles = true;
                         }
                     })

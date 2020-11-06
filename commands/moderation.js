@@ -18,14 +18,14 @@ function getUser(message, args) {
         mention = args[0];
         var id = mention.match(/^<@!?(\d+)>$/)[1];
         
-        return message.guild.members.find(m => m.id == id);
+        return message.guild.members.cache.find(m => m.id == id);
     }
     else if (args && args[0].length == ("274639466294149122").length && !isNaN(args[0])) {
         //Use ID to get user (user does not need to be a current member of the guild to be banned by ID)
 
         var id = args[0];
 
-        var user = message.guild.members.find(m => m.id == id);
+        var user = message.guild.members.cache.find(m => m.id == id);
 
         return {id: id, member: user, user: user ? user.user : false};
     }
@@ -34,7 +34,7 @@ function getUser(message, args) {
 
         var tag = args.join(" ").match(/(.+#[0-9]{4})/)[0];
 
-        var user = message.guild.members.find(m => m.user.tag == tag);
+        var user = message.guild.members.cache.find(m => m.user.tag == tag);
 
         return user;
     }
@@ -102,7 +102,7 @@ function getTime() {
 function doPurge(message, args) {
     var purgeamnt = args[0];
     var purgelimit = Number(purgeamnt) + 1;
-    message.channel.fetchMessages({ limit: purgelimit }).then(messages => {
+    message.channel.messages.fetch({ limit: purgelimit }).then(messages => {
         message.channel.bulkDelete(messages);
         message.reply("deleted " + messages.array().length + " messages, including deletion command.");
     }).catch(err => {
@@ -166,7 +166,7 @@ function doMute(message, args) {
     var name = member.user.username;
     if (userHasProperty(member.id, "muted")) return message.channel.send(`User \`${name}\` is already muted.`);
 
-    var mutedRole = message.guild.roles.find(role => role.name.toLowerCase() === "muted");
+    var mutedRole = message.guild.roles.cache.find(role => role.name.toLowerCase() === "muted");
     if (!mutedRole) return message.channel.send("No role named 'Muted' exists in this server. Create one to be able to mute users.");
 
     var reason = args.length > 1 ? args.slice(1).join(" ") : "Unknown reason";
@@ -175,7 +175,7 @@ function doMute(message, args) {
     //Accounts for ID
     if ("member" in member) member = member.member;
 
-    member.addRole(mutedRole, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to mute user \`${name}\`. I may be missing permissions to do so.`));
+    member.roles.add(mutedRole, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to mute user \`${name}\`. I may be missing permissions to do so.`));
     message.reply(`muted user \`${name}\`. They will still be muted if they leave and rejoin.`);
 
     var storage = evg.get();
@@ -205,7 +205,7 @@ function doKick(message, args) {
     if ("member" in member) member = member.member;
 
     //Save roles
-    var roles = member.roles.map(role => role.id);
+    var roles = member.roles.cache.map(role => role.id);
 
     member.kick(reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to kick user \`${name}\`. I may be missing permissions to do so.`));
     message.reply(`kicked user \`${name}\`.`);
@@ -239,7 +239,7 @@ function doBan(message, args, isPerma) {
     if (!origMember.user) {
         //User to be banned does not exist in current guild, but can still be banned (ban by ID)
 
-        message.guild.ban(origMember.id, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to ban user \`${name}\`. I may be missing permissions to do so, or that user ID may not exist.`));
+        message.guild.members.ban(origMember.id, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to ban user \`${name}\`. I may be missing permissions to do so, or that user ID may not exist.`));
 
     }
     else {
@@ -279,7 +279,7 @@ function doUnmute(message, args) {
     var name = member.user.username;
     if (!userHasProperty(member.id, "muted")) return message.channel.send(`User \`${name}\` is not muted, and cannot be unmuted.`);
 
-    var mutedRole = message.guild.roles.find(role => role.name.toLowerCase() === "muted");
+    var mutedRole = message.guild.roles.cache.find(role => role.name.toLowerCase() === "muted");
     if (!mutedRole) return message.channel.send("No role named 'Muted' exists in this server. Create one to be able to mute/unmute users.");
 
     var reason = args.length > 1 ? args.slice(1).join(" ") : "Unknown reason";
@@ -288,7 +288,7 @@ function doUnmute(message, args) {
     //Accounts for ID
     if ("member" in member) member = member.member;
 
-    member.removeRole(mutedRole, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to unmute user \`${name}\`. I may be missing permissions to do so.`));
+    member.roles.remove(mutedRole, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to unmute user \`${name}\`. I may be missing permissions to do so.`));
     message.reply(`unmuted user \`${name}\`.`);
 
     var storage = evg.get();
@@ -319,7 +319,7 @@ function doUnban(message, args) {
 
     evg.set(storage);
 
-    message.guild.unban(member.id, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to unban user \`${name}\`. I may be missing permissions to do so, or that user ID may not exist, or the user may not have been banned.`));
+    message.guild.members.unban(member.id, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to unban user \`${name}\`. I may be missing permissions to do so, or that user ID may not exist, or the user may not have been banned.`));
     message.reply(`unbanned user \`${name}\`.`);
 
 }
@@ -330,7 +330,7 @@ function keepPermabanned(client) {
         var member = initializeUser(user.id);
 
         if (member.permabanned) {
-            guild.ban(user.id, "User is permabanned, and can only be unbanned via /unban.").catch((err) => console.log(err));
+            guild.members.ban(user.id, "User is permabanned, and can only be unbanned via /unban.").catch((err) => console.log(err));
         }
     })
 }
@@ -340,10 +340,10 @@ function keepPermabanned(client) {
 function keepMuted(client) {
     client.on("guildMemberAdd", (member) => {
         var user = initializeUser(member.id);
-        var mutedRole = member.guild.roles.find(role => role.name.toLowerCase() === "muted");
+        var mutedRole = member.guild.roles.cache.find(role => role.name.toLowerCase() === "muted");
 
         if (user.kicked) {
-            member.addRoles(user.kicked);
+            member.roles.add(user.kicked);
             user.kicked = false;
 
             var storage = evg.get();
@@ -351,7 +351,7 @@ function keepMuted(client) {
             evg.set(storage);
         }
         else if (user.muted) {
-            member.addRole(mutedRole, "User is currently muted. Re-adding Muted role.").catch((err) => console.log(err));
+            member.roles.add(mutedRole, "User is currently muted. Re-adding Muted role.").catch((err) => console.log(err));
         }
     })
 }

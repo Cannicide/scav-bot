@@ -12,13 +12,13 @@ module.exports = {
             if (args.length >= 1 && args[0]) {
                 var name = args.join(" ");
 
-                var user = message.guild.members.find(m => m.user.tag == name);
+                var user = message.guild.members.cache.find(m => m.user.tag == name);
 
                 if (!user) {
                     message.channel.send("Could not find a user with the tag: " + name);
                 }
                 else {
-                    url += user.user.displayAvatarURL;
+                    url += user.user.displayAvatarURL();
 
                     message.channel.send({files: [{
                         attachment: url,
@@ -29,7 +29,7 @@ module.exports = {
             }
             else {
 
-                url += message.author.displayAvatarURL;
+                url += message.author.displayAvatarURL();
 
                 message.channel.send({files: [{
                     attachment: url,

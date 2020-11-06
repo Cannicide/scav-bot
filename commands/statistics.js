@@ -27,11 +27,11 @@ var stats = new Command("statistics", (message, args) => {
 
     getServerInfo((info) => {
 
-        var memOnline = message.guild.members.filter(m => m.presence.status != 'offline').size;
+        var memOnline = message.guild.members.cache.filter(m => m.presence.status != 'offline').size;
         var memTotal = message.guild.memberCount;
         var memPercent = memOnline / memTotal * 100;
 
-        let embed = new Interface.Embed(message, message.guild.iconURL, [
+        let embed = new Interface.Embed(message, message.guild.iconURL(), [
             {
                 name: "Minecraft Server",
                 value: `Players Online: ${info.players}\nVersion: 1.8.x-1.12.x`
@@ -45,13 +45,16 @@ var stats = new Command("statistics", (message, args) => {
         embed.embed.description = "View all statistics [here](https://scav-bot.glitch.me/statistics)";
 
         embed.embed.title = "**Statistics**";
+      
+        //return message.channel.send("The statistics command is currently down due to an update to the Discord API that breaks this command. The entire bot must be rewritten in order to fix this.");
+      
         message.channel.send(embed);
 
         //message.channel.send("**Statistics**\n\nPlayers Online: " + info.players + "\nVersion: " + "1.8.x-1.12.x");//info.version);
 
     }, (err) => {
 
-        let embed = new Interface.Embed(message, message.guild.iconURL, [], "The server appears to be down.\nView all statistics [here](https://scav-bot.glitch.me/statistics)");
+        let embed = new Interface.Embed(message, message.guild.iconURL(), [], "The server appears to be down.\nView all statistics [here](https://scav-bot.glitch.me/statistics)");
 
         embed.embed.title = "**Statistics**";
         message.channel.send(embed);
@@ -69,6 +72,8 @@ function logStatistics(client) {
 
     setInterval(() => {
 
+      //return;
+      
         var fulldate = new Date().toLocaleString('en-US', {
             timeZone: 'America/New_York'
         });
@@ -107,8 +112,8 @@ function logStatistics(client) {
         if (time.mins == 0 && !(time.hours in obj[date])) {
             getServerInfo((info) => {
 
-                var guild = client.guilds.find(g => g.id == "717160493088768020");
-                response.onlineDiscordMembers = guild.members.filter(m => m.presence.status != 'offline').size;
+                var guild = client.guilds.cache.find(g => g.id == "717160493088768020");
+                response.onlineDiscordMembers = guild.members.cache.filter(m => m.presence.status != 'offline').size;
                 response.totalDiscordMembers = guild.memberCount;
                 response.percentDiscordOnline = response.onlineDiscordMembers / response.totalDiscordMembers * 100;
 
@@ -132,8 +137,8 @@ function scheduler(client) {
 
         getServerInfo((info) => {
 
-            var guild = client.guilds.find(g => g.id == "717160493088768020");
-            var channel = guild ? guild.channels.find(c => c.id == "753387453108453457") : false;
+            var guild = client.guilds.cache.find(g => g.id == "717160493088768020");
+            var channel = guild ? guild.channels.cache.find(c => c.id == "753387453108453457") : false;
             var msg = false;
 
             if (info && info.players) msg = `📊 ${info.players} ${info.players == 1 ? "person is" : "people are"} playing scav`;

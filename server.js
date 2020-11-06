@@ -14,7 +14,8 @@ const listener = app.listen(process.env.PORT, function() {
 
 //Discord.js initialized
 const Discord = require('discord.js');
-const client = new Discord.Client();
+const intents = ["GUILDS", "GUILD_MEMBERS", "GUILD_BANS", "GUILD_VOICE_STATES", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS", "GUILD_MESSAGE_TYPING", "DIRECT_MESSAGES", "GUILD_PRESENCES"];
+const client = new Discord.Client({intents: intents, ws:{intents: intents}});
 var prefix = "/";
 
 require("./website").setup(app, client);
@@ -38,8 +39,8 @@ moderation.moderation.keepPermabanned(client);
 moderation.moderation.keepMuted(client);
 
 client.on('guildCreate', guild => {
-    var guildX = client.guilds.get("668485643487412234");
-    guildX.channels.get(guildX.channels.find(c => c.name == "logs").id).send("Scav Discord Bot was added to the guild: " + guild.name);
+    var guildX = client.guilds.cache.get("668485643487412234");
+    guildX.channels.cache.get(guildX.channels.cache.find(c => c.name == "logs").id).send("Scav Discord Bot was added to the guild: " + guild.name);
 });
 
 var commands = [];
@@ -62,8 +63,8 @@ client.on('ready', () => {
         PresenceHandler.set(presence);
     }, 10 * 60 * 1000);
 
-    var guild = client.guilds.get("668485643487412234");
-    guild.channels.get(guild.channels.find(c => c.name == "logs").id).fetchMessage("751504541756817481").then(msg => msg.edit("Scav Discord Bot is up and running again on the optimal port.\nAs of: " + new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}) + " EST"));
+    var guild = client.guilds.cache.get("668485643487412234");
+    guild.channels.cache.get(guild.channels.cache.find(c => c.name == "logs").id).messages.fetch("751504541756817481").then(m => m.edit("Scav Discord Bot is up and running again on the optimal port.\nAs of: " + new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}) + " EST"));
     
 
     //Import commands:

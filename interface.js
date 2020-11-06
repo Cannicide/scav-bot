@@ -46,12 +46,12 @@ function FancyMessage(title, question, bullets, options) {
 function EmbedMessage(message, thumbnail, fields, desc) {
     let userID = message.author.id;
     let client = message.client;
-    var tuser = client.users.find(m => m.id == userID);
+    var tuser = client.users.cache.find(m => m.id == userID);
     return {embed: {
         "color": tuser.toString().substring(2, 8),
         "timestamp": new Date(),
         "footer": {
-          "icon_url": client.user.avatarURL,
+          "icon_url": client.user.avatarURL(),
           "text": client.user.username
         },
         "thumbnail": {
@@ -59,7 +59,7 @@ function EmbedMessage(message, thumbnail, fields, desc) {
         },
         "author": {
           "name": tuser.username,
-          "icon_url": tuser.avatarURL
+          "icon_url": tuser.avatarURL()
         },
         "fields": fields,
         "image": {},
@@ -83,7 +83,7 @@ function Interface(message, question, callback, type) {
     message.channel.send(question).then((msg) => {
         qMessage = msg;
     });
-    const collector = new Discord.MessageCollector(message.channel, m => m.author.id == message.author.id, {maxMatches: 1});
+    const collector = new Discord.MessageCollector(message.channel, m => m.author.id == message.author.id, {max: 1});
     collector.on("collect", msg => {
         collected = true;
         callback(msg, qMessage);
@@ -125,7 +125,7 @@ function ReactionInterface(message, question, reactions, callback) {
             let collector = m.createReactionCollector((r, user) => r.emoji.name === reaction.emoji.name && user.id === message.author.id, { time: 120000 });
 
             collector.on("collect", r => {
-                r.remove(message.author);
+                r.users.remove(message.author);
 
                 callback(m, r);
             });

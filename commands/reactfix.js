@@ -9,7 +9,7 @@ module.exports = new Command("reactfix", (message, args) => {
     }
     else {
         try {
-            message.guild.channels.find("name", args[0]).fetchMessage(args[1]).then(msg => {
+            message.guild.channels.cache.find(c => c.name == args[0]).messages.fetch(args[1]).then(msg => {
                 msg.react("713053971757006950");
 
                     //Send nay after yea
