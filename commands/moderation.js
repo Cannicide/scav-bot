@@ -393,7 +393,7 @@ var moderation = {
     clear_hist: new Alias("clearhist", "clearhistory"),
 
     mute: new Command("mute", doMute, {
-        roles: ["Helper", "Mod", "Head Mod", "Admin", "System Administrator", "Manager", "Owner"]
+        roles: ["Pre-Mod", "Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
     }, false, "Moderation command to mute a user. Muted users cannot unmute themselves by leaving and rejoining the server.")
     .attachArguments([
         {
@@ -407,7 +407,7 @@ var moderation = {
     ]),
 
     unmute: new Command("unmute", doUnmute, {
-        roles: ["Helper", "Mod", "Head Mod", "Admin", "System Administrator", "Manager", "Owner"]
+        roles: ["Pre-Mod", "Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
     }, false, "Moderation command to unmute a user.")
     .attachArguments([
         {
@@ -421,7 +421,7 @@ var moderation = {
     ]),
 
     kick: new Command("kick", doKick, {
-        roles: ["Mod", "Head Mod", "Admin", "System Administrator", "Manager", "Owner"]
+        roles: ["Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
     }, false, "Moderation command to kick a user.")
     .attachArguments([
         {
@@ -435,7 +435,7 @@ var moderation = {
     ]),
 
     ban: new Command("ban", doBan, {
-        roles: ["Head Mod", "Admin", "System Administrator", "Manager", "Owner"]
+        roles: ["Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
     }, false, "Moderation command to ban a user.")
     .attachArguments([
         {
