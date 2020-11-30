@@ -138,10 +138,11 @@ function scheduler(client) {
         getServerInfo((info) => {
 
             var guild = client.guilds.cache.find(g => g.id == "717160493088768020");
-            var channel = guild ? guild.channels.cache.find(c => c.id == "753387453108453457") : false;
+            // var channel = guild ? guild.channels.cache.find(c => c.id == "753387453108453457") : false;
+            var channel = guild ? guild.channels.cache.find(c => c.id == "783094945976287302") : false;
             var msg = false;
 
-            if (info && info.players) msg = `📊 ${info.players} ${info.players == 1 ? "person is" : "people are"} playing scav`;
+            if (info && info.players) msg = `${info.players} ${info.players == 1 ? "person is" : "people are"} on Scav.tv!`;
 
             if (channel && msg && channel.name != msg) channel.setName(msg).catch(console.error);
 
