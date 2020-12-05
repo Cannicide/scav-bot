@@ -8,12 +8,12 @@ function setup(app, disc) {
         res.send("Sup, I'm the Scav Discord Bot. I don't have a fancy website yet. Blame Cannicide, he's too lazy to make one. As soon as it's made, it'll be here.");
     });
   
-  /*app.get("/profile/:user/:discrim", (req, res) => {
+  app.get("/profile/:user/:discrim", (req, res) => {
     res.header("Access-Control-Allow-Origin", "https://cannicideapi.glitch.me");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     var tag = req.params.user + "#" + req.params.discrim;
-    res.send(disc.users.find(m => m.tag == tag).displayAvatarURL);
-  });*/
+    res.send(disc.users.cache.find(m => m.tag == tag).displayAvatarURL());
+  });
   
   app.get("/statistics/json", (req, res) => {
       res.sendFile(__dirname + "/storage/statistics.json");

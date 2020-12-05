@@ -42,8 +42,8 @@ module.exports = new Command("clearsuggestions", (message, args) => {
             for (var suggestion of suggestions) {
 
                 var vote_total = suggestion.yeas + suggestion.nays;
-                var yeas_percent = Math.round(suggestion.yeas / vote_total);
-                var nays_percent = Math.round(suggestion.nays / vote_total);
+                var yeas_percent = Math.round(suggestion.yeas / vote_total * 100);
+                var nays_percent = Math.round(suggestion.nays / vote_total * 100);
 
                 var data = {
                     name: `${suggestion.desc}       [Yeas: ${suggestion.yeas} | Nays: ${suggestion.nays}]`,
