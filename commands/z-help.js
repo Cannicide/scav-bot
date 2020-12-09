@@ -48,7 +48,7 @@ module.exports = {
                     }
                 });
                 
-                embed = new Interface.Embed(message, thumb, pages[pageIndex]);
+                embed = new Interface.Embed(message, thumb, pages.slice(0, 2));
                 embed.embed.title = "**Commands**";
                 embed.embed.description = "Scavenger is the official ScavengerCraft Discord Bot, created by Cannicide#2753."
             }
