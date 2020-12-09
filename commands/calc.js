@@ -22,7 +22,15 @@ module.exports = new Command("calc", async (message, args) => {
             return message.channel.send("```\nCleared defined mathematical variables and functions from memory.```");
         }
 
-        var result = await parser.evaluate(expression);
+        var result;
+
+        try  {
+            result = await parser.evaluate(expression);
+        }
+        catch (err) {
+            result = err.message;
+        }
+
         message.channel.send("```\n" + result + "```");
 
     }
