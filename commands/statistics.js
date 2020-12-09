@@ -1,4 +1,4 @@
-var ping = require("minecraft-server-util");
+var ping = require("minecraft-server-util").status;
 var Command = require("../command");
 var Interface = require("../interface");
 
@@ -10,7 +10,7 @@ function getServerInfo(callback, err) {
         version: "",
     }
 
-    ping("server.scav.tv", 25565)
+    ping("server.scav.tv")
         .then((response) => {
             info.players = response.onlinePlayers;
             info.icon = response.favicon;
