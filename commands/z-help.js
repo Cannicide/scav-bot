@@ -63,7 +63,7 @@ module.exports = {
 
                 embed = new Interface.Embed(message, thumb, pages[pageIndex]);
                 embed.embed.title = "**Commands**";
-                embed.embed.description = "Scavenger is the official ScavengerCraft Discord Bot, created by Cannicide#2753 (JayCraft2)."
+                embed.embed.description = "Scavenger is the official ScavengerCraft Discord Bot, created by Cannicide#2753."
             }
 
             if (args) {
