@@ -15,12 +15,9 @@ module.exports = {
 
             var isFull = false;
             var pages = [];
-            var pageIndex = 0;
 
             function fullList() {
                 isFull = true;
-                var insertions = 0;
-                var page = [];
 
                 cmds.forEach((item) => {
                     if (!item.special) {
@@ -47,20 +44,10 @@ module.exports = {
                         }
                         res.inline = true;
                         //fields.push(res);
-
-                        insertions++;
-
-                        page.push(res);
-                        if (insertions == 2) {
-                            pages.push(page);
-                            page = [];
-                            insertions = 0;
-                        }
+                        pages.push(res);
                     }
                 });
                 
-                if (pages[pages.length - 1] != page && page.length != 0) pages.push(page);
-
                 embed = new Interface.Embed(message, thumb, pages[pageIndex]);
                 embed.embed.title = "**Commands**";
                 embed.embed.description = "Scavenger is the official ScavengerCraft Discord Bot, created by Cannicide#2753."
@@ -110,42 +97,7 @@ module.exports = {
 
             if (!isFull) message.channel.send(embed);
             else {
-                message.channel.send(embed).then((m) => {
-                    m.react("⬅️").then(r => m.react("➡️"));
-
-                    let forwardsFilter = m.createReactionCollector((reaction, user) => reaction.emoji.name === '➡️' && user.id === message.author.id, { time: 120000 });
-                    let backFilter = m.createReactionCollector((reaction, user) => reaction.emoji.name === '⬅️' && user.id === message.author.id, { time: 120000 });
-                
-                    forwardsFilter.on("collect", r => {
-                        r.users.remove(message.author);
-
-                        pageIndex++;
-
-                        if (pageIndex > pages.length - 1) {
-                            pageIndex = pages.length - 1;
-                        }
-                        else {
-                            embed.embed.fields = pages[pageIndex];
-                            m.edit(embed);
-                        }
-
-                    });
-
-                    backFilter.on("collect", r => {
-                        r.users.remove(message.author);
-
-                        pageIndex--;
-
-                        if (pageIndex < 0) {
-                            pageIndex = 0;
-                        }
-                        else {
-                            embed.embed.fields = pages[pageIndex];
-                            m.edit(embed);
-                        }
-
-                    });
-                });
+                new Interface.Paginator(message, embed, pages, 2);
             }
 
         }, false, false, "Gets a list of all commands, parameters, and their descriptions. Format: [optional] parameters, <required> parameters.").attachArguments([

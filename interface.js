@@ -47,7 +47,7 @@ function EmbedMessage(message, thumbnail, fields, desc) {
     let userID = message.author.id;
     let client = message.client;
     var tuser = client.users.cache.find(m => m.id == userID);
-    return {embed: {
+    var embed = {embed: {
         "color": tuser.toString().substring(2, 8),
         "timestamp": new Date(),
         "footer": {
@@ -67,6 +67,10 @@ function EmbedMessage(message, thumbnail, fields, desc) {
         "description": desc ? desc : ""
       }
     };
+
+    if (!thumbnail) embed.embed.thumbnail = {};
+
+    return embed;
 }
 
 /**
@@ -75,22 +79,37 @@ function EmbedMessage(message, thumbnail, fields, desc) {
  * @param {Object} message - Message containing the command that led to calling on the interface
  * @param {String} question - Question to ask user for a response
  */
-function Interface(message, question, callback, type) {
+function Interface(message, question, callback, type, options) {
 
     var collected = false;
     var closed = false;
+    var deleted = false;
+
+    var opts = options || {max: 1};
+
     var qMessage;
     message.channel.send(question).then((msg) => {
         qMessage = msg;
     });
-    const collector = new Discord.MessageCollector(message.channel, m => m.author.id == message.author.id, {max: 1});
+
+    const collector = new Discord.MessageCollector(message.channel, m => m.author.id == message.author.id, opts);
+
     collector.on("collect", msg => {
         collected = true;
         callback(msg, qMessage);
+
+        if (!deleted && options.deleteSelf) {
+            deleted = true;
+            qMessage.delete();
+        }
     });
 
     collector.on("end", () => {
         closed = true;
+        if (!deleted && options.deleteSelf) {
+            deleted = true;
+            qMessage.delete();
+        }
     });
 
     setTimeout(() => {
@@ -100,6 +119,10 @@ function Interface(message, question, callback, type) {
             qMessage.edit(`<a:no_animated:670060124399730699> <@!${message.author.id}>, the menu closed because you did not respond within 5 minutes. ${type.match("report") ? `**Failed to report your ${type.split(".")[1]}.** Please follow ALL of the instructions in the given time to report the ${type.split(".")[1]} properly.` : ""}`);
             closed = true;
             callback(false);
+            if (!deleted && options.deleteSelf) {
+                deleted = true;
+                qMessage.delete();
+            }
         }
     }, 5 * 60 * 1000);
 
@@ -122,7 +145,7 @@ function ReactionInterface(message, question, reactions, callback) {
             if (previous) previous = previous.then(r => {return m.react(reaction)})
             else previous = m.react(reaction);
 
-            let collector = m.createReactionCollector((r, user) => r.emoji.name === reaction.emoji.name && user.id === message.author.id, { time: 120000 });
+            let collector = m.createReactionCollector((r, user) => r.emoji.name === reaction && user.id === message.author.id, { time: 120000 });
 
             collector.on("collect", r => {
                 r.users.remove(message.author);
@@ -166,7 +189,7 @@ function Paginator(message, embed, elements, perPage) {
     if (pages[pages.length - 1] != page && page.length != 0) pages.push(page);
     embed.embed.fields = pages[pageIndex];
 
-    new ReactionInterface(message, embed, ['➡️', '⬅️'], (m, r) => {
+    new ReactionInterface(message, embed, ['⬅️', '➡️'], (m, r) => {
 
         if (r.emoji.name == '⬅️') {
             //Back
