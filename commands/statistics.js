@@ -10,7 +10,7 @@ function getServerInfo(callback, err) {
         version: "",
     }
 
-    ping("server.scav.tv")
+    ping(process.env.SERVER_IP)
         .then((response) => {
             info.players = response.onlinePlayers;
             info.icon = response.favicon;
