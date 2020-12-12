@@ -10,7 +10,7 @@ module.exports = new Command("eval", async (message, args) => {
 
     try {
         var result = eval(args.join(" "));
-        if (result && result != "" && !(result instanceof Promise)) await message.channel.send("```js\n" + result + "```");
+        if (result != "" && !(result instanceof Promise)) await message.channel.send("```js\n" + result + "```");
     }
     catch (err) {
         message.channel.send("```js\n" + err.stack + "```");
