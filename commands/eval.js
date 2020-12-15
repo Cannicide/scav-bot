@@ -2,7 +2,17 @@
 
 const Command = require("../command");
 const evg = require("../evg");
+const Reactions = new evg("reactions");
 const Interface = require("../interface");
+
+const utilities = {
+    drawGiveaway: (message) => {
+        require("./giveaway").drawWinners(message.client, Reactions.get().find(element => element.type == "giveaway"));
+    },
+    timeToMs: (time) => {
+        return require("./giveaway").convertToTime(time);
+    }
+}
 
 module.exports = new Command("eval", async (message, args) => {
 

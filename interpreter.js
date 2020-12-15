@@ -2,8 +2,12 @@
 
 //var report = require("./commands/report");
 var sibyll = require("./sibyll/sibyll");
+var evg = require("./evg");
+var polls = require("./commands/poll");
 
 function Interpreter(message) {
+
+    var Reactions = new evg("reactions");
 
     this.interpret = (args) => {
 
@@ -56,6 +60,57 @@ function Interpreter(message) {
             new srz.Link(args[0], message);
         }
 
+    }
+
+    this.interpretReaction = (reaction, user, isAdding) => {
+
+        if (user.bot) return;
+
+        var message = reaction.message;
+        var emote = reaction.emoji.name;
+        var emoteID = reaction.emoji.id;
+
+        var cache = Reactions.get();
+        var inCache = cache.find(entry => (entry.name == emote || entry.id == emoteID || (Array.isArray(entry.name) && entry.name.includes(emote)) || (Array.isArray(entry.id) && entry.id.includes(emoteID))) && entry.messageID == message.id);
+
+        //The given message is not to be interpreted by the interpreter if not stored as such
+        if (!inCache) return;
+
+        //Check the purpose of the interpreter, i.e. if it is a poll
+        if (inCache.type == "poll") {
+            //Vote on poll
+            
+            //Check whether we are removing or adding the reaction
+            if (isAdding) {
+                polls.votes.add(reaction, user);
+            }
+            else {
+                polls.votes.retract(reaction, user);
+            }
+
+        }
+        else if (inCache.type == "poll-end") {
+            //End poll
+            
+            //If we are adding the trash reaction, end the poll
+            if (isAdding) {
+                polls.polls.endByReaction(reaction, user);
+            }
+
+        }
+
+    }
+
+    this.fetchReactionInterpreters = (client) => {
+        var cache = Reactions.get();
+
+        cache.forEach(entry => {
+            //Fetch and cache all messages that need their reactions interpreted
+            client.channels.fetch(entry.channelID).then(channel => {
+                channel.messages.fetch(entry.messageID, true);
+            });
+        });
+        
     }
 
 }

@@ -83,6 +83,14 @@ client.on('ready', () => {
     });
 
     commands = requisites.find(c => c.getName() == "help").getCommands();
+
+    //Fetch reaction interpreters:
+    var intp = new Interpreter();
+    intp.fetchReactionInterpreters(client);
+
+    //Setup giveaway scheduler
+    require("./commands/giveaway.js").giveawayScheduler(client);
+
 });
 
 client.on('message', message => {
@@ -164,6 +172,16 @@ client.on('message', message => {
     catch (err) {
         message.channel.send(`Errors found:\n\`\`\`${err}\nAt ${err.stack}\`\`\``);
     }
+});
+
+client.on("messageReactionAdd", (r, user) => {
+    var intp = new Interpreter();
+    intp.interpretReaction(r, user, true);
+});
+
+client.on("messageReactionRemove", (r, user) => {
+    var intp = new Interpreter();
+    intp.interpretReaction(r, user, false);
 });
 
 //Added token
