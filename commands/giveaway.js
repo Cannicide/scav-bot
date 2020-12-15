@@ -81,7 +81,7 @@ function drawWinners(client, giveaway) {
 
                 Reactions.set(cache);
 
-                m.channel.send(`${winners}\n\n💝 **You won the giveaway!** 💝`).then(c => c.delete({timeout:5000}));
+                m.channel.send(`🎁${winners}\n\n💝 **You won the giveaway!** 💝`).then(c => c.delete({timeout:5000}));
 
                 if (currentlyScheduled) {
                     currentlyScheduled.cancel();
