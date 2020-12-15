@@ -135,6 +135,7 @@ module.exports = {
                 Reactions.set(cache);
 
                 m.react("🎁").then(r => giveawayScheduler(message.client));
+                message.delete({timeout: 3000});
 
             });
 
