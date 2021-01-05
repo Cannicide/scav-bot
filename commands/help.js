@@ -9,15 +9,17 @@ module.exports = new Command("help", {
     },
     {
       name: "nf",
-      flag: "Displays just the basic description and usage for a command, without displaying any of the other information."
+      flag: "Displays only basic command info."
     }
-  ]
+  ],
+  aliases: ["bothelp", "scavenger"]
 }, (message) => {
 
     var cmds = new Command(false, {}).getCommands();
     var prefix = message.prefix;
     var args = message.args;
-    var thumb = "https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png";
+    //var thumb = "https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png";
+    var thumb = message.guild.iconURL({dynamic: true});
 
     function getCommandUsage(item) {
       var res = {
@@ -60,38 +62,45 @@ module.exports = new Command("help", {
       var cmd = cmds.find(c => c.name.toLowerCase() == args[0].toLowerCase());
 
       var res = getCommandUsage(cmd);
-      var fields = [];
+      var fields = false;
 
       //Add more information for this single command, if flag unspecified
       if (!(message.flags && message.flags.includes("-nf"))) {
         fields = [
           {
             name: "DM-Only Command",
-            value: cmd.dm_only ? "Yes" : "No",
+            value: cmd.dm_only ? "Only works in DMs." : "Does not work in DMs.",
             inline: true
           },
           {
             name: "Cooldown",
-            value: cmd.cooldown ? cmd.cooldown + " seconds" : "None"
+            value: cmd.cooldown ? cmd.cooldown + " seconds" : "None",
+            inline: true
           },
           {
             name: "Whitelisted Channels",
-            value: cmd.channels ? cmd.channels.join(", ") : "Command works in all channels"
+            value: cmd.channels.length > 0 ? cmd.channels.join(", ") : "Command works in all channels",
+            inline: true
           },
           {
             name: "Aliases",
-            value: cmd.isalias ? "Alias of " + cmd.aliases.join(", ") : (cmd.aliases ? cmd.aliases.join(", ") : "No aliases")
+            value: cmd.isalias ? "Alias of " + cmd.aliases.join(", ") : (cmd.aliases.length > 0 ? cmd.aliases.join(", ") : "No aliases"),
+            inline: true
           },
           {
             name: "Special Properties",
-            value: (cmd.special ? "Visible in Command List: No" : "Visible in Command List: Yes") + "\n" + (cmd.flags ? "Command Flags: " + cmd.flags.map(flag => `${flag.name} (${flag.desc})`).join(", ") : "")
+            value: (cmd.special ? "**Visible in Help:** No" : "**Visible in Help:** Yes") + "\n" + (cmd.flags ? "**Flags:** " + cmd.flags.map(flag => `${flag.name} (${flag.desc})`).join(", ") : ""),
+            inline: true
           },
           {
             name: "Use Requirements",
-            value: (cmd.perms ? "**Perms:** " + cmd.perms.join(", ") + "\n" : "") + (cmd.roles ? "**Roles:** " + cmd.roles.join(", ") : "")
+            value: cmd.perms || cmd.roles ? ((cmd.perms ? "**Perms:** " + cmd.perms.join(", ") + "\n" : "") + (cmd.roles ? "**Roles:** " + cmd.roles.join(", ") : "")) : "None",
+            inline: true
           }
         ];
       }
+
+      if (res.name == "Eval Command" && fields) fields.find(field => field.name == "Use Requirements").value = "**Users:** Cannicide only";
 
       message.channel.embed({
         title: res.name,
@@ -106,7 +115,7 @@ module.exports = new Command("help", {
 
       var pages = [];
       cmds.forEach((item) => {
-        if (!item.special) {
+        if (!item.special && !item.name.startsWith("scav:")) {
             var res = getCommandUsage(item);
             pages.push(res);
         }

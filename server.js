@@ -8,7 +8,7 @@ const client = new Handler.Client({
 var Interpreter = require("./interpreter");
 
 //Setup website
-require("./website").setup(app, client);
+require("./website").setup(Handler.express, client);
 
 //Setup Presence Cycler
 var Cycler = require("./presence-cycler");
@@ -48,7 +48,7 @@ client.on('ready', () => {
     guild.channels.cache.get(guild.channels.cache.find(c => c.name == "logs").id).messages.fetch("751504541756817481").then(m => m.edit("Scav Discord Bot is up and running again on the optimal port.\nAs of: " + new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}) + " EST"));
     
     //Initialize command handler
-    client.commands.initialize();
+    client.commands.initialize("commands");
 
     //Fetch reaction interpreters:
     Interpreter.initialize(client);
@@ -59,8 +59,8 @@ client.on('ready', () => {
         filter: (m, args) => args[0].toLowerCase().match("suggestion:") && m.channel.name.toLowerCase().match("suggestions"),
         response: (message) => {
             message.react("713053971757006950")
-            .then(m => {
-                m.react("713053971211878452");
+            .then(r => {
+                message.react("713053971211878452");
             });
         }
     });
@@ -84,6 +84,10 @@ client.on('ready', () => {
             });
         }
     });
+
+    //Register poll interpreters:
+    const polls = require("./commands/poll");
+    polls.initialize();
 
     //Setup DiscordSRZ
     const DiscordSRZ = require("./discordsrz");

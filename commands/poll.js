@@ -2,7 +2,7 @@
 
 var Command = require("../command");
 var Interface = require("../interface");
-const Interpreter = require("./interpreter");
+const Interpreter = require("../interpreter");
 var Reactions = require("../evg").remodel("reactions");
 
 const emotes = {

@@ -92,7 +92,7 @@ function handleCommand(message, cmds) {
         cmd.set(message, pfix);
 
         cmd.execute(args).catch(err => {
-          message.reply("an error occurred; " + err);
+          message.reply("an error occurred:\n\n" + err);
         });
 
         message.channel.stopTyping();
@@ -120,7 +120,7 @@ function ExtendedClient({intents, name}) {
 
   var local_client = new Discord.Client({intents: bot_intents, ws:{intents: bot_intents}});
 
-  client = Object.create(local_client);
+  client = local_client;
   
   client.commands = {
     initialize: initialize,

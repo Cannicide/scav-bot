@@ -5,7 +5,8 @@
 var Command = require("../command");
 
 module.exports = new Command("banappeal", {
-    desc: "Command to create a ban appeal."
+    desc: "Command to create a ban appeal.",
+    aliases: ["banappeals", "ban-appeal", "ban-appeals"]
 }, (message) => {
 
     let thumb = "https://cdn.discordapp.com/attachments/728320173009797190/751494625298219057/scavlogo.png";

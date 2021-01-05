@@ -15,11 +15,12 @@ module.exports = new Command("translate", {
     },
     {
       name: "to",
-      static: true
+      static: true,
+      optional: true
     },
     {
       name: "language",
-      feedback: "Please specify a language to translate to."
+      optional: true
     }
   ]
 }, (message) => {
@@ -27,7 +28,7 @@ module.exports = new Command("translate", {
   var plusArgs = "translate+" + message.args.join("+");
   var spaceArgs = message.args.join(" ");
 
-  if (message.args[message.args.length - 2].toLowerCase() != "to") {
+  if (message.args.length < 3 || message.args[message.args.length - 2].toLowerCase() != "to") {
     plusArgs += "+to+English";
   }
   else {
@@ -43,7 +44,7 @@ module.exports = new Command("translate", {
     var lang = $('select[aria-label="Select target language"] > option[selected]').attr("value");
 
     message.channel.embed({
-      desc: `Original: ${spaceArgs}\n\nTranslation (${lang}): ${translation}`
+      desc: `Original: ${spaceArgs}\n\nTranslation (${lang ? lang : "Unknown"}): ${translation == "" ? "Unable to translate." : translation}`
     });
   })
   .catch(err => {

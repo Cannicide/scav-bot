@@ -17,7 +17,6 @@ function Alias(alias, original) {
     var list = new Command(false, {}).getCommands();
     var origcmd = list.find(c => c.name == original).cmd;
     var options = origcmd.getOptions();
-    var args = origcmd.getArguments();
 
     options.desc = `Alias of the \`/${origcmd.getName()}\` command.`;
     options.aliases = [];
@@ -25,14 +24,13 @@ function Alias(alias, original) {
 
     var aliascmd = new Command(alias, options, options.method);
 
-    if (args) aliascmd.attachArguments(args);
-
     this.getAsCommand = () => {
         return aliascmd;
     }
+    
+    origcmd.pushAlias(alias);
+    aliascmd.pushAlias(original);
 
-    origcmd.attachAlias(this.getAsCommand());
-    aliascmd.attachAlias(origcmd);
 }
 
 /**
@@ -66,7 +64,7 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
     channels = channels || [];
 
     //Add default, bot-specific alias
-    if (name && method && !isalias) aliases.push("zh:" + name);
+    if (name && method && !isalias) aliases.push("scav:" + name);
 
     //Add restricted channel if non-existent
     channels.forEach(channel => {
@@ -114,22 +112,14 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
     this.getAliases = () => {
         return aliases;
     }
+    
+    this.pushAlias = (aliasName) => {
+      if (!aliases.includes(aliasName)) aliases.push(aliasName);
+    }
 
     this.getOptions = () => {
 
-        return {method:method,perms:perms,roles:roles,invisible:invisible,desc:desc,dm_only:dm_only,cooldown:cooldown,channels:channels};
-    }
-
-    /**
-     * Attach alias Command objects to this Command.
-     * @param {Object} alias - Command object
-     */
-    this.attachAlias = (alias) => {
-
-        aliases.push(alias);
-        commands.find(c => c.name == name).aliases = aliases;
-
-        return this;
+        return {method:method,perms:perms,roles:roles,invisible:invisible,desc:desc,dm_only:dm_only,cooldown:cooldown,channels:channels,aliases:aliases,args:args};
     }
 
     /**
@@ -147,31 +137,6 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
         });
 
         return matched;
-    }
-
-    /**
-     * Attach arguments to the command. Overwrites any arguments added by previous function calls or by the 'args' option in the Command constructor.
-     * @param {Object[]} objArr - A list of the possible command arguments of a command.
-     * @param {String} objArr[].name - The name of the argument.
-     * @param {Boolean} [objArr[].optional] - Whether or not the argument is optional. Default is false.
-     * @param {String} [objArr[].feedback] - Feedback to send if the argument is mandatory and not provided by the user. If unspecified or false, a default feedback is sent. If set as "none", no feedback except the help message is sent. If set as an embed, the first embed feedback in the arg list will be sent as the only feedback.
-     * @param {Boolean} [objArr[].static] - Whether or not the argument is a static and constant word, for documentation purposes.
-     * @param {String} [objArr[].flag] - Specifies the description of the flag if this argument is a flag, for documentation purposes.
-     */
-    this.attachArguments = (objArr) => {
-        args = objArr;
-
-        if (args.length == 0) args = false;
-
-        flags = [];
-        args.filter(arg => arg.flag).forEach(flag => flags.push({
-          name: "-" + flag.name,
-          desc: flag.flag
-        }));
-
-        commands.find(c => c.name == name).flags = flags;
-
-        return this;
     }
 
     function CatchPromise(err) {
@@ -194,6 +159,7 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
             if (flag) {
               foundFlags.push(flag.name);
               userArgs.splice(index, 1);
+              if (userArgs.length == 0) userArgs = false;
             }
           })
 
@@ -230,7 +196,7 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
           const timeLeft = (expirationTime - now) / 1000;
 		      error = `Please wait ${timeLeft.toFixed(1)} more second(s) before reusing the \`${name}\` command.`;
         }
-        else if (userArgs.length < mandatoryArgs.length) {
+        else if ((mandatoryArgs.length > 0 && !userArgs) || userArgs.length < mandatoryArgs.length) {
           //The user has specified less args than are mandatory
           var missedArgs = mandatoryArgs.slice(userArgs.length);
           error = "";
@@ -248,8 +214,8 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
         else {
 
             //Extended message and channel objects
-            var advMessage = Object.create(message);
-            var advChannel = Object.create(message.channel);
+            var advMessage = message;
+            var advChannel = message.channel;
 
             advMessage.interface = Interface;
             advMessage.interpreter = Interpreter;

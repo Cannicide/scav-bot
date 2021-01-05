@@ -24,7 +24,7 @@ module.exports = new Command("timezone", {
   ]
 }, (message) => {
 
-  if (message.args[0].match(":") && message.args.length >= 4 && message.args.join("+").match("to")) {
+  if (message.args.length >= 4 && message.args.join("+").match("to")) {
     //First arg is a time
     //"To timezone" is specified; correct syntax
 

@@ -1,7 +1,8 @@
 //A command to allow me to execute code and determine values of variables from in Discord itself
 
 const Command = require("../command");
-const Reactions = require("../evg").resolve("giveaway");
+const evg = require("../evg");
+const Reactions = evg.resolve("giveaway");
 const Interface = require("../interface");
 
 const utilities = {
@@ -32,7 +33,7 @@ module.exports = new Command("eval", {
 
     try {
         var result = eval(message.args.join(" "));
-        if (result != "" && !(result instanceof Promise) && !message.flags) await message.channel.send("```js\n" + result + "```");
+        if (result != "" && !(result instanceof Promise) && !(message.flags && message.flags.includes("-n"))) await message.channel.send("```js\n" + result + "```");
     }
     catch (err) {
         message.channel.send("```js\n" + err.stack + "```");

@@ -1,4 +1,5 @@
-var DiscordSRZ = require("./discordsrz").DiscordSRZ;
+var DiscordSRZ = require("./discordsrz");
+var evg = require("./evg").remodel("statistics");
 
 function setup(app, disc) {
     const bodyParser = require("body-parser");
@@ -16,7 +17,7 @@ function setup(app, disc) {
   });
   
   app.get("/statistics/json", (req, res) => {
-      res.sendFile(__dirname + "/storage/statistics.json");
+      res.send(evg.all());
   });
 
   app.get("/statistics/", (req, res) => {
@@ -35,7 +36,7 @@ function setup(app, disc) {
   
   app.post("/discordsrz", (req, res) => {
     console.log("DiscordSRZ:", req.body);
-    new DiscordSRZ.DataHandler(req.body);
+    new DiscordSRZ.DiscordSRZ.DataHandler(req.body);
   });
 
 }

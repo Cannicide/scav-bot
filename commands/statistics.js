@@ -38,7 +38,7 @@ var stats = new Command("statistics", {
         message.channel.embed({
             desc: "View all statistics [here](https://scav-bot.glitch.me/statistics)",
             title: "**Statistics**",
-            thumbnail: message.guild.iconURL(),
+            thumbnail: message.guild.iconURL({dynamic: true}),
             fields: [
                 {
                     name: "Minecraft Server",
@@ -56,7 +56,7 @@ var stats = new Command("statistics", {
         message.channel.embed({
             desc: "The server appears to be down.\nView all statistics [here](https://scav-bot.glitch.me/statistics)",
             title: "**Statistics**",
-            thumbnail: message.guild.iconURL()
+            thumbnail: message.guild.iconURL({dynamic: true})
         });
 
     });
@@ -65,7 +65,7 @@ var stats = new Command("statistics", {
 
 });
 
-var evg = require("../evg").remodel("statistics");
+var evg = require("../evg").resolve("statistics");
 
 function logStatistics(client) {
 
@@ -121,7 +121,7 @@ function logStatistics(client) {
             });
         }
 
-    }, 5 * 60 * 1000);
+    }, 1 * 60 * 1000);
 
 }
 

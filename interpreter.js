@@ -1,7 +1,6 @@
 //A non-command system to interpret messages that are not commands and auto-respond/auto-react if necessary
 
 var evg = require("./evg");
-var polls = require("./commands/poll");
 
 function Interpreter() {
 

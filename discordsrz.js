@@ -1,6 +1,6 @@
 //DiscordSRZ, my alternative to DiscordSRV
 
-const db = require("./evg").remodel("srz");
+const db = require("./evg").resolve("srz");
 const guildID = "717160493088768020";
 const srzroles = ["Iron", "Gold", "Diamond", "Emerald", "Obsidian", "TNT", "Netherstar", "Bedrock"];
 
@@ -162,17 +162,17 @@ function DiscordSRZ(client) {
 
     function CodeLink(code, message) {
 
-        if (db.find(m => m.code == code) && !db.find(m => m.code == code).discord) {
+        if (db.values().find(m => m.code == code) && !db.values().find(m => m.code == code).discord) {
             //Code exists, pair minecraft with discord
 
-            var user = db.all().find(m => m.code == code);
+            var user = db.values().find(m => m.code == code);
             db.table(user).set("discord", message.author.id);
 
             DiscordAction(false);
 
-            message.channel.send(`✅ Successfully linked your discord account with your minecraft account (UUID: ${db.find(m => m.code == code).user})!`);
+            message.channel.send(`✅ Successfully linked your discord account with your minecraft account (UUID: ${db.values().find(m => m.code == code).user})!`);
         }
-        else if (db.find(m => m.code == code) && db.find(m => m.code == code).discord) {
+        else if (db.values().find(m => m.code == code) && db.values().find(m => m.code == code).discord) {
             message.channel.send(`<a:no_animated:670060124399730699> Failed to link your accounts: you specified an invalid or pre-existing code.`);
         }
         else {
@@ -191,7 +191,7 @@ function DiscordSRZ(client) {
 
 module.exports = {
     DiscordSRZ: false,
-    initialize: function(client) {
+    initialize(client) {
         this.DiscordSRZ = new DiscordSRZ(client);
 
         require("./interpreter").register({
