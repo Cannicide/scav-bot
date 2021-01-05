@@ -2,9 +2,22 @@
 
 var Command = require("../command");
 
-module.exports = new Command("define", (message, args) => {
+module.exports = new Command("define", {
+    desc: "Meme command to generate an image definition with custom text; word and definition separated by pipe (`|`) character.",
+    args: [
+        {
+            name: "word",
+            optional: false
+        },
+        {
+            name: " | definition",
+            optional: true
+        }
+    ]
+}, (message) => {
 
     var url;
+    var args = message.args
     args = args && args.length > 0 ? args.join(" ").split(" | ") : args;
 
     if (args.length == 1 && args[0]) {
@@ -35,13 +48,4 @@ module.exports = new Command("define", (message, args) => {
         message.channel.send("Please specify a word and definition separated by a pipe character.\nEx: `/define Scyxer | Player who is bad at Among Us.`\n\nOr, specify just a word to fetch its real definition.\nEx: `/define Context`");
     }
 
-}, false, false, "Meme command to generate an image definition with custom text; word and definition separated by pipe (`|`) character.").attachArguments([
-    {
-        name: "word",
-        optional: false
-    },
-    {
-        name: " | definition",
-        optional: true
-    }
-]);
+});

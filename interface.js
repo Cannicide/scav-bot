@@ -1,4 +1,3 @@
-var Discord;
 
 /**
  * Creates a new FancyMessage, helping to make the Interface more interactive and aesthetically appealing.
@@ -36,39 +35,59 @@ function FancyMessage(title, question, bullets, options) {
 /**
  * Creates a new Embed, which can be used with or without the interface.
  * @constructor
+ * @param {Object} options - The Embed's options.
  * @param {Object} message - The message containing the call to the currently processing command.
- * @param {String} thumbnail - The URL to the preferred thumbnail of the Embed.
- * @param {Object[]} fields - An array of the contents of the Embed, separated by field.
- * @param {String} fields[].name - The title of the field.
- * @param {String} fields[].value - The content of the field.
- * @param {Boolean} [fields[].inline] - Whether or not the field is inline.
+ * @param {String} [options.thumbnail] - The URL to the preferred thumbnail of the Embed.
+ * @param {Object[]} [options.fields] - An array of the contents of the Embed, separated by field.
+ * @param {String} options.fields[].name - The title of the field.
+ * @param {String} options.fields[].value - The content of the field.
+ * @param {Boolean} [options.fields[].inline] - Whether or not the field is inline.
+ * @param {String} [options.desc] - The description of the Embed.
+ * @param {String} [options.title] - The title of the Embed.
+ * @param {String[]} [options.footer[]] - An array of footer messages.
+ * @param {String} [options.icon] - The URL of the Embed's icon.
+ * @param {String} [options.image] - The URL of the Embed's image.
+ * @param {String} [options.video] - The URL of the Embed's video.
+ * @param {Boolean} [options.noTimestamp] - Whether or not to remove the timestamp from the Embed.
  */
-function EmbedMessage(message, thumbnail, fields, desc) {
+function EmbedMessage(message, {thumbnail, fields, desc, title, footer, icon, image, video, noTimestamp}) {
+
     let userID = message.author.id;
-    let client = message.client;
-    var tuser = client.users.cache.find(m => m.id == userID);
+    var tuser = message.client.users.cache.find(m => m.id == userID);
+
+    footer = footer || [tuser.username];
+    if (!Array.isArray(footer)) footer = [footer];
+
     var embed = {embed: {
         "color": tuser.toString().substring(2, 8),
-        "timestamp": new Date(),
+        "timestamp": !noTimestamp ? new Date() : false,
         "footer": {
-          "icon_url": client.user.avatarURL(),
-          "text": client.user.username
+          "icon_url": icon || tuser.avatarURL(),
+          "text": footer.join(" • ")
         },
         "thumbnail": {
           "url": thumbnail
         },
-        "author": {
-          "name": tuser.username,
-          "icon_url": tuser.avatarURL()
-        },
-        "fields": fields,
-        "image": {},
-        "video": {},
-        "description": desc ? desc : ""
+        "author": {},
+        "fields": fields || [],
+        "image": image || {},
+        "video": video || {},
+        "description": desc || "",
+        "title": title || ""
       }
     };
 
     if (!thumbnail) embed.embed.thumbnail = {};
+
+    embed.remove = (property) => {
+      delete embed.embed[property];
+      return embed;
+    }
+
+    embed.set = (property, value) => {
+      embed.embed[property] = value;
+      return embed;
+    }
 
     return embed;
 }
@@ -92,7 +111,7 @@ function Interface(message, question, callback, type, options) {
         qMessage = msg;
     });
 
-    const collector = new Discord.MessageCollector(message.channel, m => m.author.id == message.author.id, opts);
+    const collector = message.channel.createMessageCollector(m => m.author.id == message.author.id, opts);
 
     collector.on("collect", msg => {
         collected = true;
@@ -145,7 +164,7 @@ function ReactionInterface(message, question, reactions, callback) {
             if (previous) previous = previous.then(r => {return m.react(reaction)})
             else previous = m.react(reaction);
 
-            let collector = m.createReactionCollector((r, user) => r.emoji.name === reaction && user.id === message.author.id, { time: 120000 });
+            let collector = m.createReactionCollector((r, user) => (r.emoji.name === reaction || r.emoji.id === reaction) && user.id === message.author.id, { time: 120000 });
 
             collector.on("collect", r => {
                 r.users.remove(message.author);
@@ -222,13 +241,6 @@ function Paginator(message, embed, elements, perPage) {
 
 module.exports = {
     Interface: Interface,
-    /**
-     * Sets the Discord variable to the actual Discord object from the server, in order to use MessageCollector.
-     * @param {Object} client - The inputted Discord object to set the Discord variable to
-     */
-    setClient: (client) => {
-        Discord = client;
-    },
     FancyMessage: FancyMessage,
     Embed: EmbedMessage,
     ReactionInterface: ReactionInterface,

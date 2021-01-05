@@ -1,5 +1,7 @@
 //Meme command to add a filter to a user's profile, such as grayscale or sepia.
 
+/* Temporarily disabled due to non-functional API
+
 var Command = require("../command");
 var Alias = require("../alias");
 
@@ -97,3 +99,5 @@ module.exports = {
         new Alias("filters", "filter")
     ]
 }
+
+*/

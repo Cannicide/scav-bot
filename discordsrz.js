@@ -1,6 +1,6 @@
 //DiscordSRZ, my alternative to DiscordSRV
 
-var evg = new (require("./evg"))("srz")
+const db = require("./evg").remodel("srz");
 const guildID = "717160493088768020";
 const srzroles = ["Iron", "Gold", "Diamond", "Emerald", "Obsidian", "TNT", "Netherstar", "Bedrock"];
 
@@ -15,15 +15,12 @@ function DiscordSRZ(client) {
     }
 
     function sync(data) {
-        var db = evg.get();
 
-        var user = db.find(m => m.user == data.user);
+        var user = db.has(data.user);
 
         if (user) {
             //User does exist, continue
-            db.find(m => m.user == data.user).data = data.data;
-
-            evg.set(db);
+            db.table(data.user).set("data", data.data);
 
             DiscordAction(false);
         }
@@ -34,21 +31,18 @@ function DiscordSRZ(client) {
     }
 
     function unsync(uuid) {
-        var db = evg.get();
 
-        var user = db.find(m => m.user == uuid);
+        var user = db.has(uuid);
 
         if (user) {
             //User does exist, continue
 
             //Set user's code to -1 and unsync roles
-            db.find(m => m.user == uuid).code = -1;
-            evg.set(db);
+            db.table(uuid).set("code", -1);
             DiscordAction(true);
 
             //Remove user from db
-            db.splice(db.findIndex(m => m.user == uuid), 1);
-            evg.set(db);
+            db.remove(uuid);
         }
         else {
             //User does not exist, something went wrong
@@ -57,9 +51,8 @@ function DiscordSRZ(client) {
     }
 
     function add(input) {
-        var db = evg.get();
 
-        if (db.find(m => m.user == input.user)) {
+        if (db.has(input.user)) {
             //User already exists, something went wrong
             new ErrorSRZ("DiscordSRZ: Something went wrong in the sync-adding process.");
         }
@@ -72,8 +65,7 @@ function DiscordSRZ(client) {
                 data: input.data
             }
 
-            db.push(data);
-            evg.set(db)
+            db.set(data.user, data);
         }
     }
 
@@ -85,16 +77,14 @@ function DiscordSRZ(client) {
     function DiscordAction(isunsync) {
 
         var guild = client.guilds.cache.get(guildID);
-        var db = evg.get();
 
-        db.forEach((user) => {
+        db.values().forEach((user) => {
             if (user.discord) {
                 //User is linked
                 var member = guild.members.cache.find(m => m.id == user.discord);
 
                 if (member) {
                     //Member exists
-
 
                     //Sync/unsync Roles:
 
@@ -140,7 +130,7 @@ function DiscordSRZ(client) {
 
                 }
             }
-        })
+        });
 
     }
 
@@ -171,15 +161,12 @@ function DiscordSRZ(client) {
     }
 
     function CodeLink(code, message) {
-        var db = evg.get();
-      
-      console.log(db);
 
         if (db.find(m => m.code == code) && !db.find(m => m.code == code).discord) {
             //Code exists, pair minecraft with discord
 
-            db.find(m => m.code == code).discord = message.author.id;
-            evg.set(db);
+            var user = db.all().find(m => m.code == code);
+            db.table(user).set("discord", message.author.id);
 
             DiscordAction(false);
 
@@ -197,9 +184,22 @@ function DiscordSRZ(client) {
     this.DataHandler = DataHandler;
     this.Link = CodeLink;
     this.getData = () => {
-        return evg.get();
+        return db.values();
     }
 
 }
 
-module.exports = DiscordSRZ;
+module.exports = {
+    DiscordSRZ: false,
+    initialize: function(client) {
+        this.DiscordSRZ = new DiscordSRZ(client);
+
+        require("./interpreter").register({
+            type: "dm",
+            filter: (message, args) => args[0].length == 5 && args[0].match(/[0-9]{5}/g),
+            response: (message, args) => {
+                new this.DiscordSRZ.Link(args[0], message);
+            }
+        });
+    }
+};

@@ -1,9 +1,7 @@
 //Moderation commands for Scavenger
 
 var Command = require("../command");
-var evg = new (require("../evg"))("moderation");
-var Interface = require("../interface");
-var Alias = require("../alias");
+var evg = require("../evg").remodel("moderation");
 
 //------------------------------USER PROPERTIES----------------------------------
 
@@ -55,20 +53,17 @@ function userHasProperty(id, property) {
 
 //Initialize user object if not initialized
 function initializeUser(id) {
-    var storage = evg.get();
 
-    if (!(id in storage)) {
-        storage[id] = {
+    if (!evg.has(id)) {
+        evg.set(id, {
             muted: false,
             permabanned: false,
             kicked: false,
             history: []
-        };
-
-        evg.set(storage);
+        });
     }
 
-    return storage[id];
+    return evg.get(id);
 }
 
 //-----------------------HELPER METHODS-----------------------\\
@@ -99,7 +94,8 @@ function getTime() {
 //-----------------------MODERATION COMMANDS--------------------\\
 
 //Mass-deletes messages
-function doPurge(message, args) {
+function doPurge(message) {
+    var args = message.args;
     var purgeamnt = args[0];
     var purgelimit = Number(purgeamnt) + 1;
     message.channel.messages.fetch({ limit: purgelimit }).then(messages => {
@@ -111,13 +107,17 @@ function doPurge(message, args) {
 }
 
 //Get user punishment history
-function doHistory(message, args) {
+function doHistory(message) {
 
+    var args = message.args;
     var member = getUser(message, args);
 
     if (!member) return message.channel.send("Please specify a valid user to get the history of. Users can be specified by mention, ID, or tag.");
 
-    var title = `History of ID:${member.id}`;
+    var username = message.guild.members.cache.get(member.id);
+    if (username) username = username.user.tag;
+
+    var title = `History of ID: ${username || member.id}`;
     var desc = ``;
 
     var user = initializeUser(member.id);
@@ -126,17 +126,17 @@ function doHistory(message, args) {
         desc += item + "\n";
     });
 
-    var embed = new Interface.Embed(message, "", [], desc);
-    embed.embed.thumbnail = {};
-    embed.embed.title = title;
-
-    message.channel.send(embed);
+    message.channel.embed({
+        desc: desc,
+        title: title
+    });
 
 }
 
 //Clear user history
-function clearHistory(message, args) {
+function clearHistory(message) {
 
+    var args = message.args;
     var member = getUser(message, args);
 
     if (!member) return message.channel.send("Please specify a valid user to get the history of. Users can be specified by mention, ID, or tag.");
@@ -145,18 +145,16 @@ function clearHistory(message, args) {
 
     user.history = [];
 
-    var storage = evg.get();
-    storage[member.id] = user;
-
-    evg.set(storage);
+    evg.set(member.id, user);
 
     message.channel.send(`Cleared history of ID:${member.id}`);
 
 }
 
 //Mutes users by giving them a Muted role, and automatically gives them the Muted role back if they try to leave and rejoin the server
-function doMute(message, args) {
+function doMute(message) {
 
+    var args = message.args;
     var member = getUser(message, args);
     var origMember = member;
 
@@ -178,18 +176,15 @@ function doMute(message, args) {
     member.roles.add(mutedRole, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to mute user \`${name}\`. I may be missing permissions to do so.`));
     message.reply(`muted user \`${name}\`. They will still be muted if they leave and rejoin.`);
 
-    var storage = evg.get();
-
-    storage[origMember.id].muted = true;
-    storage[origMember.id].history.push(`Muted at ${getTime()} with reason: ${reason}`);
-
-    evg.set(storage);
+    evg.table(origMember.id).set("muted", true);
+    evg.table(origMember.id).table("history").push(`Muted at ${getTime()} with reason: ${reason}`);
 
 }
 
 //Kicks the user, saving the user's roles and adding them back when they rejoin
-function doKick(message, args) {
+function doKick(message) {
 
+    var args = message.args;
     var member = getUser(message, args);
     var origMember = member;
 
@@ -210,18 +205,15 @@ function doKick(message, args) {
     member.kick(reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to kick user \`${name}\`. I may be missing permissions to do so.`));
     message.reply(`kicked user \`${name}\`.`);
 
-    var storage = evg.get();
-
-    storage[origMember.id].history.push(`Kicked at ${getTime()} with reason: ${reason}`);
-    storage[origMember.id].kicked = roles;
-
-    evg.set(storage);
+    evg.table(origMember.id).table("history").push(`Kicked at ${getTime()} with reason: ${reason}`);
+    evg.table(origMember.id).set("kicked", roles);
 
 }
 
 //Bans the user
-function doBan(message, args, isPerma) {
+function doBan(message, isPerma) {
 
+    var args = message.args;
     var member = getUser(message, args);
     var origMember = member;
 
@@ -250,26 +242,23 @@ function doBan(message, args, isPerma) {
     
     message.reply(`banned user \`${name}\`.`);
 
-    var storage = evg.get();
-
-    storage[origMember.id].history.push(`${isPerma ? "Permabanned" : "Banned"} at ${getTime()} with reason: ${reason}`);
-    if (isPerma) storage[origMember.id].permabanned = true;
-
-    evg.set(storage);
+    evg.table(origMember.id).table("history").push(`${isPerma ? "Permabanned" : "Banned"} at ${getTime()} with reason: ${reason}`);
+    if (isPerma) evg.table(origMember.id).set("permabanned", true);
 
 }
 
 //Bans the user, and keeps them banned even if someone unbans them, until unbanned using the bot's unban command
 //This is designed for potentially high-profile bans or when non-administrator staff members with unban perms may be compromised
-function doPermaBan(message, args) {
+function doPermaBan(message) {
 
-    doBan(message, args, true);
+    doBan(message, true);
 
 }
 
 //Unmutes the user
-function doUnmute(message, args) {
+function doUnmute(message) {
 
+    var args = message.args;
     var member = getUser(message, args);
     var origMember = member;
 
@@ -291,18 +280,15 @@ function doUnmute(message, args) {
     member.roles.remove(mutedRole, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to unmute user \`${name}\`. I may be missing permissions to do so.`));
     message.reply(`unmuted user \`${name}\`.`);
 
-    var storage = evg.get();
-
-    storage[origMember.id].muted = false;
-    storage[origMember.id].history.push(`Unmuted at ${getTime()} with reason: ${reason}`);
-
-    evg.set(storage);
+    evg.table(origMember.id).set("muted", false);
+    evg.table(origMember.id).table("history").push(`Unmuted at ${getTime()} with reason: ${reason}`);
 
 }
 
 //Unbans the user (including perma and non-perma bans)
-function doUnban(message, args) {
+function doUnban(message) {
 
+    var args = message.args;
     var member = getUser(message, args);
 
     if (!member) return message.channel.send("Please specify a valid user to unban. Users can be specified by mention, ID, or tag.");
@@ -312,12 +298,8 @@ function doUnban(message, args) {
     var reason = args.length > 1 ? args.slice(1).join(" ") : "Unknown reason";
     if (reason.match(/(#[0-9]{4})/)) reason = reason.split(/#[0-9]{4}/)[1];
 
-    var storage = evg.get();
-
-    storage[member.id].history.push(`Unbanned at ${getTime()} with reason: ${reason}`);
-    storage[member.id].permabanned = false;
-
-    evg.set(storage);
+    evg.table(member.id).table("history").push(`Unbanned at ${getTime()} with reason: ${reason}`);
+    evg.table(member.id).set("permabanned", false);
 
     message.guild.members.unban(member.id, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to unban user \`${name}\`. I may be missing permissions to do so, or that user ID may not exist, or the user may not have been banned.`));
     message.reply(`unbanned user \`${name}\`.`);
@@ -346,9 +328,7 @@ function keepMuted(client) {
             member.roles.add(user.kicked);
             user.kicked = false;
 
-            var storage = evg.get();
-            storage[member.id] = user;
-            evg.set(storage);
+            evg.set(member.id, user);
         }
         else if (user.muted) {
             member.roles.add(mutedRole, "User is currently muted. Re-adding Muted role.").catch((err) => console.log(err));
@@ -358,123 +338,130 @@ function keepMuted(client) {
 
 var moderation = {
 
-    purge: new Command("purge", doPurge, {
-        perms: ["MANAGE_MESSAGES"]
-    }, false, "Moderation command to bulk-delete messages. Specified number of messages to delete does not include command message.")
-    .attachArguments([
-        {
-            name: "# of messages",
-            optional: false
-        }
-    ]),
+    purge: new Command("purge", {
+        perms: ["MANAGE_MESSAGES"],
+        desc: "Moderation command to bulk-delete messages. Specified number of messages to delete does not include command message.",
+        args: [
+            {
+                name: "# of messages",
+                feedback: "Please specify the number of messages to delete."
+            }
+        ]
+    }, doPurge),
 
-    history: new Command("history", doHistory, {
-        roles: ["Staff"]
-    }, false, "Moderation command to view a user's punishment history.")
-    .attachArguments([
-        {
-            name: "user",
-            optional: false
-        }
-    ]),
+    history: new Command("history", {
+        roles: ["Staff"],
+        desc: "Moderation command to view a user's punishment history.",
+        args: [
+            {
+                name: "user",
+                feedback: "Please specify a user to view the history for."
+            }
+        ],
+        aliases: ["hist"]
+    }, doHistory),
 
-    hist: new Alias("hist", "history"),
+    clear_history: new Command("clearhistory", {
+        perms: ["ADMINISTRATOR"],
+        desc: "Moderation command to clear a user's punishment history.",
+        args: [
+            {
+                name: "user",
+                feedback: "Please specify a user to clear the history for."
+            }
+        ],
+        aliases: ["clearhist"]
+    }, clearHistory),
 
-    clear_history: new Command("clearhistory", clearHistory, {
-        perms: ["ADMINISTRATOR"]
-    }, false, "Moderation command to clear a user's punishment history.")
-    .attachArguments([
-        {
-            name: "user",
-            optional: false
-        }
-    ]),
+    mute: new Command("mute", {
+        roles: ["Pre-Mod", "Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"],
+        desc: "Moderation command to mute a user. Muted users cannot unmute themselves by leaving and rejoining the server.",
+        args: [
+            {
+                name: "user",
+                feedback: "Please specify a user to mute. They will be auto-muted if they try to rejoin."
+            },
+            {
+                name: "reason",
+                optional: true
+            }
+        ]
+    }, doMute),
 
-    clear_hist: new Alias("clearhist", "clearhistory"),
+    unmute: new Command("unmute", {
+        roles: ["Pre-Mod", "Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"],
+        desc: "Moderation command to unmute a user.",
+        args: [
+            {
+                name: "user",
+                feedback: "Please specify a user to unmute."
+            },
+            {
+                name: "reason",
+                optional: true
+            }
+        ]
+    }, doUnmute),
 
-    mute: new Command("mute", doMute, {
-        roles: ["Pre-Mod", "Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
-    }, false, "Moderation command to mute a user. Muted users cannot unmute themselves by leaving and rejoining the server.")
-    .attachArguments([
-        {
-            name: "user",
-            optional: false
-        },
-        {
-            name: "reason",
-            optional: true
-        }
-    ]),
+    kick: new Command("kick", {
+        roles: ["Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"],
+        desc: "Moderation command to kick a user.",
+        args: [
+            {
+                name: "user",
+               feedback: "Please specify a user to kick. All of their roles will be preserved when they rejoin."
+            },
+            {
+                name: "reason",
+                optional: true
+            }
+        ]
+    }, doKick),
 
-    unmute: new Command("unmute", doUnmute, {
-        roles: ["Pre-Mod", "Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
-    }, false, "Moderation command to unmute a user.")
-    .attachArguments([
-        {
-            name: "user",
-            optional: false
-        },
-        {
-            name: "reason",
-            optional: true
-        }
-    ]),
+    ban: new Command("ban", {
+        roles: ["Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"],
+        desc: "Moderation command to ban a user.",
+        args: [
+            {
+                name: "user",
+                feedback: "Please specify a user to ban."
+            },
+            {
+                name: "reason",
+                optional: true
+            }
+        ]
+    }, doBan),
 
-    kick: new Command("kick", doKick, {
-        roles: ["Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
-    }, false, "Moderation command to kick a user.")
-    .attachArguments([
-        {
-            name: "user",
-            optional: false
-        },
-        {
-            name: "reason",
-            optional: true
-        }
-    ]),
+    permaban: new Command("permaban", {
+        perms: ["ADMINISTRATOR"],
+        desc: "Moderation command to 'permaban' a user. Permabanned users cannot rejoin until the unban command is used, even if unbanned through discord.",
+        args: [
+            {
+                name: "user",
+                feedback: "Please specify a user to permaban."
+            },
+            {
+                name: "reason",
+                optional: true
+            }
+        ]
+    }, doPermaBan),
 
-    ban: new Command("ban", doBan, {
-        roles: ["Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
-    }, false, "Moderation command to ban a user.")
-    .attachArguments([
-        {
-            name: "user",
-            optional: false
-        },
-        {
-            name: "reason",
-            optional: true
-        }
-    ]),
-
-    permaban: new Command("permaban", doPermaBan, {
-        perms: ["ADMINISTRATOR"]
-    }, false, "Moderation command to 'permaban' a user. Permabanned users cannot rejoin until the unban command is used, even if unbanned through discord.")
-    .attachArguments([
-        {
-            name: "user",
-            optional: false
-        },
-        {
-            name: "reason",
-            optional: true
-        }
-    ]),
-
-    unban: new Command("unban", doUnban, {
-        perms: ["ADMINISTRATOR"]
-    }, false, "Moderation command to unban a user. Removes both bans and permabans, allowing the unbanned user to rejoin the server.")
-    .attachArguments([
-        {
-            name: "user",
-            optional: false
-        },
-        {
-            name: "reason",
-            optional: true
-        }
-    ])
+    unban: new Command("unban", {
+        perms: ["ADMINISTRATOR"],
+        desc: "Moderation command to unban a user. Removes both bans and permabans, allowing the unbanned user to rejoin the server.",
+        args: [
+            {
+                name: "user",
+                feedback: "Please specify a user to unban."
+            },
+            {
+                name: "reason",
+                optional: true
+            }
+        ]
+    }, doUnban)
 
 }
 

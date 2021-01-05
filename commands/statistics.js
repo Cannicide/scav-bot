@@ -23,7 +23,11 @@ function getServerInfo(callback, err) {
         });
 }
 
-var stats = new Command("statistics", (message, args) => {
+var stats = new Command("statistics", {
+    desc: "View discord and minecraft server statistics.",
+    cooldown: 30,
+    aliases: ["stats"]
+}, (message) => {
 
     getServerInfo((info) => {
 
@@ -31,48 +35,41 @@ var stats = new Command("statistics", (message, args) => {
         var memTotal = message.guild.memberCount;
         var memPercent = memOnline / memTotal * 100;
 
-        let embed = new Interface.Embed(message, message.guild.iconURL(), [
-            {
-                name: "Minecraft Server",
-                value: `Players Online: ${info.players}\nVersion: 1.8.x-1.12.x`
-            },
-            {
-                name: "Discord Server",
-                value: `Total Member Count: ${memTotal} users\nTotal Online Members: ${memOnline}\nPercent of Members Online: ${Math.round(memPercent)}%`
-            }
-        ]);
-
-        embed.embed.description = "View all statistics [here](https://scav-bot.glitch.me/statistics)";
-
-        embed.embed.title = "**Statistics**";
-      
-        //return message.channel.send("The statistics command is currently down due to an update to the Discord API that breaks this command. The entire bot must be rewritten in order to fix this.");
-      
-        message.channel.send(embed);
-
-        //message.channel.send("**Statistics**\n\nPlayers Online: " + info.players + "\nVersion: " + "1.8.x-1.12.x");//info.version);
+        message.channel.embed({
+            desc: "View all statistics [here](https://scav-bot.glitch.me/statistics)",
+            title: "**Statistics**",
+            thumbnail: message.guild.iconURL(),
+            fields: [
+                {
+                    name: "Minecraft Server",
+                    value: `Players Online: ${info.players}\nVersion: 1.8.x-1.12.x`
+                },
+                {
+                    name: "Discord Server",
+                    value: `Total Member Count: ${memTotal} users\nTotal Online Members: ${memOnline}\nPercent of Members Online: ${Math.round(memPercent)}%`
+                }
+            ]
+        });
 
     }, (err) => {
 
-        let embed = new Interface.Embed(message, message.guild.iconURL(), [], "The server appears to be down.\nView all statistics [here](https://scav-bot.glitch.me/statistics)");
-
-        embed.embed.title = "**Statistics**";
-        message.channel.send(embed);
+        message.channel.embed({
+            desc: "The server appears to be down.\nView all statistics [here](https://scav-bot.glitch.me/statistics)",
+            title: "**Statistics**",
+            thumbnail: message.guild.iconURL()
+        });
 
     });
 
         
 
-}, false, false, "View discord and minecraft server statistics.");
+});
 
-var Evg = require("../evg");
-var evg = new Evg("statistics");
+var evg = require("../evg").remodel("statistics");
 
 function logStatistics(client) {
 
     setInterval(() => {
-
-      //return;
       
         var fulldate = new Date().toLocaleString('en-US', {
             timeZone: 'America/New_York'
@@ -102,14 +99,13 @@ function logStatistics(client) {
 
         //Get storage and fetch stats:
 
-        var obj = evg.get();
         var response = {};
 
-        if (!(date in obj)) {
-            obj[date] = {};
+        if (!evg.has(date)) {
+            evg.set(date, {});
           }
 
-        if (time.mins == 0 && !(time.hours in obj[date])) {
+        if (time.mins == 0 && !(time.hours in evg.get(date))) {
             getServerInfo((info) => {
 
                 var guild = client.guilds.cache.find(g => g.id == "717160493088768020");
@@ -121,13 +117,11 @@ function logStatistics(client) {
                 response.recordedTime = fulltime;
 
                 //Set storage
-
-                obj[date][time.hours] = response;
-                evg.set(obj);
+                evg.table(date).set(time.hours, response);
             });
         }
 
-    }, 60 * 1000);
+    }, 5 * 60 * 1000);
 
 }
 

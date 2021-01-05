@@ -3,7 +3,10 @@ var Command = require("../command");
 var Trello = require('trello-node-api')(process.env.TRELLO_KEY, process.env.TRELLO_TOKEN);
 var Embed = require("../interface").Embed;
 
-module.exports = new Command("clearsuggestions", (message, args) => {
+module.exports = new Command("clearsuggestions", {
+    roles: ["Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"],
+    desc: "Clears the suggestions channels and automatically posts popular suggestions to our trello."
+}, (message) => {
 
     //Check if channel is a suggestions channel
     if (!message.channel.name.toLowerCase().match("suggestions")) return message.channel.send("You must be in a suggestions channel to use this command!");
@@ -77,13 +80,14 @@ module.exports = new Command("clearsuggestions", (message, args) => {
         //Delete channel and log the channel clearing in the logs channel
         message.channel.delete("Cleared and cloned suggestions channel.").then(m => {
             var logs = message.guild.channels.cache.find(c => c.name == "dyno-reports");
-            var embed = new Embed(message, message.guild.iconURL(), [], "**Suggestions channel was cleared and cloned.**\nAll popular suggestions have been added to the trello.");
+            var embed = new Embed(message, {
+                thumbnail: message.guild.iconURL(), 
+                desc: "**Suggestions channel was cleared and cloned.**\nAll popular suggestions have been added to the trello."
+            });
 
             if (logs) logs.send(embed); 
         });
 
     })
 
-}, {
-    roles: ["Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"]
-}, false, "Clears the suggestions channels and automatically posts popular suggestions to our trello.");
+});

@@ -1,55 +1,36 @@
-const express = require('express');
-const app = express();
-const fs = require("fs");
-
-app.use(express.static('public'));
-/*app.get('/', function(request, response) {
-  response.send("Running botserver");
-});*/
-
-
-const listener = app.listen(process.env.PORT, function() {
-  console.log('Scav Discord Bot listening on port ' + listener.address().port);
+const Handler = require("./handler");
+const intents = ["GUILDS", "GUILD_MEMBERS", "GUILD_BANS", "GUILD_VOICE_STATES", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS", "GUILD_MESSAGE_TYPING", "DIRECT_MESSAGES", "GUILD_PRESENCES"];
+const client = new Handler.Client({
+    intents: intents,
+    name: "Scav Discord Bot"
 });
 
-//Discord.js initialized
-const Discord = require('discord.js');
-const intents = ["GUILDS", "GUILD_MEMBERS", "GUILD_BANS", "GUILD_VOICE_STATES", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS", "GUILD_MESSAGE_TYPING", "DIRECT_MESSAGES", "GUILD_PRESENCES"];
-const client = new Discord.Client({intents: intents, ws:{intents: intents}});
-var prefix = "/";
+var Interpreter = require("./interpreter");
 
+//Setup website
 require("./website").setup(app, client);
 
-var inface = require("./interface");
-inface.setClient(Discord);
-
-var Interpreter = require("./interpreter");
-var Command = require("./command");
-var Alias = require("./alias");
+//Setup Presence Cycler
 var Cycler = require("./presence-cycler");
-
 const PresenceHandler = new Cycler.PresenceHandler(client);
 
+//Setup statistics logger and scheduler
 var statistics = require("./commands/statistics");
 statistics.logger(client);
 statistics.scheduler(client);
 
+//Setup moderation events
 var moderation = require("./commands/moderation");
 moderation.moderation.keepPermabanned(client);
 moderation.moderation.keepMuted(client);
 
+//Log guild joins
 client.on('guildCreate', guild => {
     var guildX = client.guilds.cache.get("668485643487412234");
     guildX.channels.cache.get(guildX.channels.cache.find(c => c.name == "logs").id).send("Scav Discord Bot was added to the guild: " + guild.name);
 });
 
-var commands = [];
-
-/**
-* @type Command[]
-*/
-var requisites = [];
-
+//Initialize everything on bot ready
 client.on('ready', () => {
     console.log('Scav Discord Bot is up and running!');
 
@@ -66,106 +47,75 @@ client.on('ready', () => {
     var guild = client.guilds.cache.get("668485643487412234");
     guild.channels.cache.get(guild.channels.cache.find(c => c.name == "logs").id).messages.fetch("751504541756817481").then(m => m.edit("Scav Discord Bot is up and running again on the optimal port.\nAs of: " + new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}) + " EST"));
     
+    //Initialize command handler
+    client.commands.initialize();
 
-    //Import commands:
-    var cmdfiles = fs.readdirSync("commands");
-    cmdfiles.forEach((item) => {
-        var file = require(`./commands/${item.substring(0, item.length - 3)}`);
-        if (file instanceof Command) {
-            requisites.push(file);
-        }
-        else if ("commands" in file) {
-            file.commands.forEach((alias) => {
-                if (alias instanceof Command) requisites.push(alias);
-                else if (alias instanceof Alias) requisites.push(alias.getAsCommand());
-            })
+    //Fetch reaction interpreters:
+    Interpreter.initialize(client);
+
+    //Setup suggestion reactions:
+    Interpreter.register({
+        type: "message",
+        filter: (m, args) => args[0].toLowerCase().match("suggestion:") && m.channel.name.toLowerCase().match("suggestions"),
+        response: (message) => {
+            message.react("713053971757006950")
+            .then(m => {
+                m.react("713053971211878452");
+            });
         }
     });
 
-    commands = requisites.find(c => c.getName() == "help").getCommands();
+    //Register Sibyll interpreter:
+    const sibyll = require("./sibyll/sibyll");
+    Interpreter.register({
+        type: "message",
+        filter: (message) => message.mentions.members.first() && message.mentions.members.first().id == "751503579457519656",
+        response: (message) => {
+            var input = message.content.substring(message.content.indexOf(" ") + 1);
 
-    //Fetch reaction interpreters:
-    var intp = new Interpreter();
-    intp.fetchReactionInterpreters(client);
+            if (input == "" || input == " " || !input || input.startsWith("<@")) return;
+
+            input = input.replace(/\@everyone/gi, "[@]everyone").replace(/\@here/gi, "[@]here");
+
+            sibyll.respond(input).then((output) => {
+
+                message.channel.send(output);
+
+            });
+        }
+    });
+
+    //Setup DiscordSRZ
+    const DiscordSRZ = require("./discordsrz");
+    DiscordSRZ.initialize(client);
 
     //Setup giveaway scheduler
     require("./commands/giveaway.js").giveawayScheduler(client);
 
 });
 
+//Setup message event listener
 client.on('message', message => {
     try {
 
         // Avoid bot messages, DM and otherwise:
-
-        if (message.author.bot) {
-            return false;
-        }
-
-        //Create new interpreter
-        var intp = new Interpreter(message);
-
-        //Command determination:
-
-        var splitter = message.content.replace(" ", ";:splitter185151813367::");
-        var splitted = splitter.split(";:splitter185151813367::");
-
-        var fixRegExp = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        var re = new RegExp(fixRegExp);
-
-        var command = splitted[0].replace(re, "");
-        command = command.toLowerCase();
-
-        if (splitted[1]) {
-            var args = splitted[1].split(" ");
-        }
-        else {
-            var args = false;
-        }
+        if (message.author.bot) return false;
 
         // DM determination:
-
         if (message.guild === null) {
-            if (splitted[0].match(prefix)) {
-                message.reply("Sorry " + message.author.username + ", DM commands are not supported by this bot.");
-            }
-            else {
-                //Interpret for DiscordSRZ code
-                intp.interpretDM(message.content.split(" "), client);
-            }
+            
+            //Interpret for DiscordSRZ code
+            Interpreter.dm(message, message.content.split(" "));
 
             return false;
         }
 
-        //Check for command:
-        var cmd = false;
+        //Handle command:
+        var cmd = client.commands.handle(message);
 
-        commands.forEach((item, index) => {
-            if (item.name == command) {
-                cmd = item.cmd;
-            }
-        });
-
-
-        if (cmd && splitted[0].match(prefix)) {
-            message.channel.startTyping();
-            setTimeout(() => {
-                cmd.set(message);
-                if (cmd.matches("help")) {
-                    cmd.execute([prefix, args]).catch((err) => {
-                        message.reply("An error occurred: " + err);
-                    });
-                }
-                else {
-                    cmd.execute(args).catch((err) => {
-                        message.reply("An error occurred: " + err);
-                    });
-                }
-                message.channel.stopTyping();
-            }, 1000);
-        }
-        else {
-            intp.interpret(message.content.split(" "));
+        //Handle messages to be interpreted:
+        if (!cmd) {
+            Interpreter.message(message, message.content.split(" "));
         }
 
     }
@@ -175,13 +125,11 @@ client.on('message', message => {
 });
 
 client.on("messageReactionAdd", (r, user) => {
-    var intp = new Interpreter();
-    intp.interpretReaction(r, user, true);
+    Interpreter.reaction(r, user, true);
 });
 
 client.on("messageReactionRemove", (r, user) => {
-    var intp = new Interpreter();
-    intp.interpretReaction(r, user, false);
+    Interpreter.reaction(r, user, false);
 });
 
 //Added token

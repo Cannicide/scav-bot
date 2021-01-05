@@ -1,8 +1,8 @@
 //Command to create giveaways!
 
 var Command = require("../command");
-var Interface = require("../interface");
-var Reactions = new (require("../evg"))("reactions");
+var Interpreter = require("../interpreter");
+var Reactions = require("../evg").resolve("giveaway");
 const schedule = require('node-schedule');
 
 //Currently scheduled giveaway draw
@@ -24,8 +24,7 @@ function convertToTime(str) {
 
 function giveawayScheduler(client) {
 
-    var cache = Reactions.get();
-    var giveaway = cache.find(element => element.type == "giveaway");
+    var giveaway = Reactions.find(element => element.type == "giveaway");
 
     if (giveaway) {
 
@@ -76,10 +75,7 @@ function drawWinners(client, giveaway) {
 
                 m.edit(embed);
 
-                var cache = Reactions.get();
-                cache.splice(cache.findIndex(a => a.type == "giveaway"), 1);
-
-                Reactions.set(cache);
+                Reactions.splice(Reactions.values().findIndex(a => a.type == "giveaway"));
 
                 m.channel.send(`🎁${winners}\n\n💝 **You won the giveaway!** 💝`).then(c => c.delete({timeout:5000}));
 
@@ -99,30 +95,42 @@ function drawWinners(client, giveaway) {
 
 module.exports = {
     commands: [
-        new Command("giveaway", (message, args) => {
+        new Command("giveaway", {
+            perms: ["ADMINISTRATOR"],
+            desc: "Start a giveaway!",
+            args: [
+                {
+                    name: "time",
+                    feedback: "Please use the proper syntax: `/giveaway <time> <# of winners> <description>`\n\nEx: `/giveaway 30m 3 Giving away free Steam codes!`\n(Selects 3 winners after 30 minutes)\n\n*Note: Please specify a time (minimum: 1 minute).*"
+                },
+                {
+                    name: "# of winners",
+                    feedback: "*Note: Please specify the number of users that will win the giveaway.*"
+                },
+                {
+                    name: "description",
+                    feedback: "*Note: Please specify a description for the giveaway.*"
+                }
+            ]
+        }, (message) => {
 
-            if (!args[0] || !args[1] || !args[2] || isNaN(args[1])) return message.channel.send("Please use the proper syntax: `/giveaway <time> <# of winners> <description>`\n\nEx: `/giveaway 30m 3 Giving away free Steam codes!`\n(Selects 3 winners after 30 minutes)\n\n*Note: The minimum time that can be specified is 1 minute.*");
+            var args = message.args;
 
-            var cache = Reactions.get();
+            if (isNaN(args[1])) return message.channel.send("Please use the proper syntax: `/giveaway <time> <# of winners> <description>`\n\nEx: `/giveaway 30m 3 Giving away free Steam codes!`\n(Selects 3 winners after 30 minutes)\n\n*Note: The minimum time that can be specified is 1 minute.*");
 
-            if (cache.find(element => element.type == "giveaway")) return message.channel.send("Sorry, only one giveaway can be running at a time.");
+            if (Reactions.find(element => element.type == "giveaway")) return message.channel.send("Sorry, only one giveaway can be running at a time.");
 
-            var embed = new Interface.Embed(message, false, [], `Click 🎁 to enter the giveaway!`);
-            embed.embed.title = `${args.slice(2).join(" ")}`;
-            embed.embed.footer.text = `${message.author.username}  •  ${args[1]} winner(s)`;
-            embed.embed.footer["icon_url"] = message.author.displayAvatarURL();
-            embed.embed.author = {};
-
-
-            message.channel.send(embed).then(m => {
+            message.channel.embed({
+                title: `${args.slice(2).join(" ")}`,
+                footer: [message.author.username, `${args[1]} winner(s)`],
+                desc: `Click 🎁 to enter the giveaway!`
+            }).then(m => {
 
                 var ms_timeout = args[0];
                 var now = new Date();
                 now.setTime(now.getTime() + convertToTime(ms_timeout));
 
                 var item = {
-                    name: "", //Not necessary since this does not require interpreter
-                    id: "",
                     type: "giveaway",
                     channelID: message.channel.id,
                     messageID: m.id,
@@ -130,29 +138,14 @@ module.exports = {
                     date: now
                 }
 
-                cache.push(item);
-
-                Reactions.set(cache);
+                Reactions.push(item);
 
                 m.react("🎁").then(r => giveawayScheduler(message.client));
                 message.delete({timeout: 3000});
 
             });
 
-        }, {perms: ["ADMINISTRATOR"]}, false, "Start a giveaway!").attachArguments([
-            {
-                name: "time",
-                optional: false
-            },
-            {
-                name: "# of winners",
-                optional: false
-            },
-            {
-                name: "description",
-                optional: false
-            }
-        ])
+        })
     ],
     drawWinners,
     giveawayScheduler,

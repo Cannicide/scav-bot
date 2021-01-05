@@ -1,5 +1,6 @@
 //Meme command to add salt above a user's profile.
 
+/* Temporarily disabled due to non-functional API
 var Command = require("../command");
 var Alias = require("../alias");
 
@@ -48,3 +49,4 @@ module.exports = {
         new Alias("salt", "salty")
     ]
 }
+*/
