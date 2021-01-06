@@ -180,7 +180,7 @@
 
         
         //Global stats variables
-        var stats;
+        var stats = {};
         //Timemodes (0 = all time, 1 = past week, 2 = one day), statsmodes (0 = discord only, 1 = both, 2 = mc only)
         var timemode = 1, statsmode = 1;
         //Selected day for timemode 2 (daily stats)
@@ -198,7 +198,10 @@
             url: dataurl,
             cache: false
         }).done((text) => {
-            stats = text;
+            
+            text.forEach(entry => {
+                stats[entry.key] = entry.value;
+            });
 
             //Builds weekly (default, stats for past 7 days) chart
             function chartWeekly() {

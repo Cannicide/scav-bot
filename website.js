@@ -1,5 +1,6 @@
 var DiscordSRZ = require("./discordsrz");
-var stats = require("./evg").remodel("statistics");
+var stats = require("./evg").resolve("statistics");
+var srz = require("./evg").resolve("srz");
 
 function setup(app, disc) {
     const bodyParser = require("body-parser");
@@ -25,7 +26,7 @@ function setup(app, disc) {
   })
 
   app.get("/userstats/json", (req, res) => {
-    res.sendFile(__dirname + "/storage/srz.json");
+    res.send(srz.values());
   });
 
   app.get("/userstats/", (req, res) => {
