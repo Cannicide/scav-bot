@@ -1,4 +1,5 @@
-var ping = require("minecraft-server-util").status;
+const util = require("minecraft-server-util");
+const ping = util.status;
 var Command = require("../command");
 var Interface = require("../interface");
 
@@ -127,22 +128,49 @@ function logStatistics(client) {
 
 //Scheduler automatically updates parts of the discord with minecraft/guild info and stats
 function scheduler(client) {
-    setInterval(() => {
 
-        getServerInfo((info) => {
+    const ip = process.env.SERVER_IP;
+    const port = Number(process.env.RCON_PORT);
+    const password = process.env.RCON_PASSWORD;
 
-            var guild = client.guilds.cache.find(g => g.id == "717160493088768020");
-            // var channel = guild ? guild.channels.cache.find(c => c.id == "753387453108453457") : false;
-            var channel = guild ? guild.channels.cache.find(c => c.id == "783094945976287302") : false;
-            var msg = false;
+    const rcon = new util.RCON(ip, { port: port, enableSRV: true, timeout: 5000, password: password });
+    const guild = client.guilds.cache.get("717160493088768020");
 
-            if (info && info.players) msg = `${info.players} ${info.players == 1 ? "person is" : "people are"} on Scav.tv!`;
+    rcon.on('output', async (message) => {
+        //Remove color codes
+        message = message.replace(/§[0-9a-f]{1}/g, "");
+        var online = message.split(" out of")[0].replace("There are ", "");
+        var vanished = 0;
 
-            if (channel && msg && channel.name != msg) channel.setName(msg).catch(console.error);
+        var msg = false;
+        const category = guild ? guild.channels.cache.get("753387453108453457") : false;
 
-        })
+        if (online.match("/")) {
+            vanished = online.split("/")[1];
+            online = online.split("/")[0];
+        }
 
-    }, 5 * 60 * 1000);
+        const oldChannel = category.children.first();
+
+        if (guild && oldChannel && online) msg = `${online} ${Number(online) == 1 ? "person is" : "people are"} on Scav.tv!`;
+        if (oldChannel && msg && oldChannel.name != msg) {
+            const channel = await oldChannel.clone({name: msg}); 
+            oldChannel.delete();
+        }
+        
+    });
+
+    rcon.connect()
+    .then(() => {
+        console.log('Connected to RCON')
+
+        //15-second statistics scheduler
+        setInterval(async () => {
+            await rcon.run("online");
+        }, 15 * 1000);
+    })
+    .catch(console.log);
+
 }
 
 module.exports = {

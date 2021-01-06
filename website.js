@@ -1,5 +1,5 @@
 var DiscordSRZ = require("./discordsrz");
-var evg = require("./evg").remodel("statistics");
+var stats = require("./evg").remodel("statistics");
 
 function setup(app, disc) {
     const bodyParser = require("body-parser");
@@ -17,7 +17,7 @@ function setup(app, disc) {
   });
   
   app.get("/statistics/json", (req, res) => {
-      res.send(evg.all());
+      res.send(stats.all());
   });
 
   app.get("/statistics/", (req, res) => {
@@ -30,6 +30,10 @@ function setup(app, disc) {
 
   app.get("/userstats/", (req, res) => {
     res.sendFile(__dirname + "/views/userstats.html");
+  });
+  
+  app.get(process.env.SPP_URL, (req, res) => {
+    res.sendFile(__dirname + "/views/punishments.html");
   });
   
   app.use(bodyParser.json());

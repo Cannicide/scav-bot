@@ -14,11 +14,6 @@ require("./website").setup(Handler.express, client);
 var Cycler = require("./presence-cycler");
 const PresenceHandler = new Cycler.PresenceHandler(client);
 
-//Setup statistics logger and scheduler
-var statistics = require("./commands/statistics");
-statistics.logger(client);
-statistics.scheduler(client);
-
 //Setup moderation events
 var moderation = require("./commands/moderation");
 moderation.moderation.keepPermabanned(client);
@@ -31,7 +26,7 @@ client.on('guildCreate', guild => {
 });
 
 //Initialize everything on bot ready
-client.on('ready', () => {
+client.once('ready', () => {
     console.log('Scav Discord Bot is up and running!');
 
     //Allows the status of the bot to be PURPLE (I don't stream on twitch anyways)
@@ -92,6 +87,11 @@ client.on('ready', () => {
     //Setup DiscordSRZ
     const DiscordSRZ = require("./discordsrz");
     DiscordSRZ.initialize(client);
+
+    //Setup statistics logger and scheduler
+    var statistics = require("./commands/statistics");
+    statistics.logger(client);
+    statistics.scheduler(client);
 
     //Setup giveaway scheduler
     require("./commands/giveaway.js").giveawayScheduler(client);
