@@ -170,7 +170,7 @@ function scheduler(client) {
             await rcon.run("online");
           }
           catch(err) {
-            rcon.connect();
+            rcon.connect().catch(console.log);
             console.log("Reconnected to RCON");
           }
         }, 15 * 1000);
