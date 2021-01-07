@@ -70,7 +70,7 @@ function EmbedMessage(message, {thumbnail, fields, desc, title, footer, icon, im
         },
         "author": {},
         "fields": fields || [],
-        "image": image || {},
+        "image": {url:image} || {},
         "video": video || {},
         "description": desc || "",
         "title": title || ""
