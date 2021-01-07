@@ -166,7 +166,13 @@ function scheduler(client) {
 
         //15-second statistics scheduler
         setInterval(async () => {
+          try {
             await rcon.run("online");
+          }
+          catch(err) {
+            rcon.connect();
+            console.log("Reconnected to RCON");
+          }
         }, 15 * 1000);
     })
     .catch(console.log);
