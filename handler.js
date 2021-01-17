@@ -106,11 +106,44 @@ function handleCommand(message, cmds) {
 
 }
 
-function ExtendedClient({intents, name}) {
+//Cycle through various presences instead of a single discord presence.
+var index = 0;
+var presenceInterval = false;
+
+/**
+ * A randomized presence message.
+ * @returns {Presence}
+ */
+function Presence(presences) {
+
+    var options = presences;
+    var selected = options[index];
+    index += 1;
+    if (index == options.length) index = 0;
+
+    this.get = () => {
+        return selected;
+    }
+}
+
+/**
+ * Extended Discord Client by Cannicide#2753
+ * @author Cannicide#2753
+ * @param {Object} p0 - Client options
+ * @param {Array} p0.intents - List of discord intents to use.
+ * @param {String} p0.name - The discord bot's name.
+ * @param {Array} p0.presences - Presences ("playing _" statuses) to cycle through every 10 minutes.
+ * @param {Object} p0.logs - Logging options
+ * @param {String} p0.logs.guildID - ID of the guild in which logging will occur.
+ * @param {String} p0.logs.channelName - Name of the channel in which logging will occur.
+ */
+function ExtendedClient({intents, name, presences, logs}) {
 
   if (client) return client;
   bot_intents = intents || bot_intents;
   name = name || "Discord Bot";
+  presences = presences || ["/help"];
+  logs = logs || false;
 
   app.use(express.static('public'));
 
@@ -136,6 +169,44 @@ function ExtendedClient({intents, name}) {
   client.intents = bot_intents;
   client.name = name;
   client.port = listener.address().port;
+
+  client.presenceCycler = (presenceArray) => {
+
+    if (presenceInterval) clearInterval(presenceInterval);
+
+    function setPresence() {
+        var presence = new Presence(presenceArray);
+
+        //Allows the status of the bot to be PURPLE (I don't stream on twitch anyways)
+        client.user.setActivity(presence.get(), { type: 'STREAMING', url: 'https://twitch.tv/cannicide' });
+    }
+
+    //Cycles the presence every 10 minutes
+    presenceInterval = setInterval(setPresence, 10 * 60 * 1000);
+    
+    setPresence("immediate action");
+
+  }
+
+  client.once("ready", () => {
+    client.presenceCycler(presences);
+
+    const logGuild = logs ? client.guilds.cache.get(logs.guildID) : false;
+    const logChannel = logs && logGuild ? logGuild.channels.cache.get(logGuild.channels.cache.find(c => c.name == logs.channelName).id) : false;
+
+    client.logs = {
+        guild: logGuild,
+        channel: logChannel,
+        send: (message) => {
+          if (!logChannel) return console.log(message);
+          logChannel.send(message);
+        },
+        edit: (messageID, message) => {
+          if (!logChannel) return console.log(message);
+          logChannel.messages.fetch(messageID).then(m => m.edit(message));
+        }
+    }
+  });
 
   return client;
 

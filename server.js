@@ -2,17 +2,18 @@ const Handler = require("./handler");
 const intents = ["GUILDS", "GUILD_MEMBERS", "GUILD_BANS", "GUILD_VOICE_STATES", "GUILD_MESSAGES", "GUILD_MESSAGE_REACTIONS", "GUILD_MESSAGE_TYPING", "DIRECT_MESSAGES", "GUILD_PRESENCES"];
 const client = new Handler.Client({
     intents: intents,
-    name: "Scav Discord Bot"
+    name: "Scav Discord Bot",
+    presences: ["Raiding Bases", "KoTH", "FFA", "No McMMO", "/help", "/help", "/help", "/help"],
+    logs: {
+        guildID: "668485643487412234",
+        channelName: "logs"
+    }
 });
 
 var Interpreter = require("./interpreter");
 
 //Setup website
 require("./website").setup(Handler.express, client);
-
-//Setup Presence Cycler
-var Cycler = require("./presence-cycler");
-const PresenceHandler = new Cycler.PresenceHandler(client);
 
 //Setup moderation events
 var moderation = require("./commands/moderation");
@@ -21,26 +22,14 @@ moderation.moderation.keepMuted(client);
 
 //Log guild joins
 client.on('guildCreate', guild => {
-    var guildX = client.guilds.cache.get("668485643487412234");
-    guildX.channels.cache.get(guildX.channels.cache.find(c => c.name == "logs").id).send("Scav Discord Bot was added to the guild: " + guild.name);
+    client.logs.send("Scav Discord Bot was added to the guild: " + guild.name);
 });
 
 //Initialize everything on bot ready
 client.once('ready', () => {
     console.log('Scav Discord Bot is up and running!');
 
-    //Allows the status of the bot to be PURPLE (I don't stream on twitch anyways)
-    var presence = new Cycler.Presence();
-    PresenceHandler.set(presence);
-
-    //Cycles the presence every 10 minutes
-    setInterval(() => {
-        var presence = new Cycler.Presence();
-        PresenceHandler.set(presence);
-    }, 10 * 60 * 1000);
-
-    var guild = client.guilds.cache.get("668485643487412234");
-    guild.channels.cache.get(guild.channels.cache.find(c => c.name == "logs").id).messages.fetch("751504541756817481").then(m => m.edit("Scav Discord Bot is up and running again on the optimal port.\nAs of: " + new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}) + " EST"));
+    client.logs.edit("751504541756817481", "Scav Discord Bot is up and running again on the optimal port.\nAs of: " + new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}) + " EST");
     
     //Initialize command handler
     client.commands.initialize("commands");
