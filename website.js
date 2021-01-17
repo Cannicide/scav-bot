@@ -59,7 +59,7 @@ function setup(app, disc) {
     res.sendFile(__dirname + "/views/userstats.html");
   });
   
-  app.get(process.env.EVIDENCE_URL, (req, res) => {
+  /*app.get(process.env.EVIDENCE_URL, (req, res) => {
     res.sendFile(__dirname + "/views/evidence.html");
   });
   
@@ -82,7 +82,9 @@ function setup(app, disc) {
     
     res.send(`https://drive.google.com/drive/folders/${process.env.EVIDENCE_GD}?usp=sharing`);
     
-  });
+  });*/
+
+  //Evidence temporarily disabled due to removal of file uploading
   
   app.get(process.env.EVIDENCE_URL + "/postevidence/:channelID/:name/:url", async (req, res) => {
     
