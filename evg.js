@@ -20,7 +20,7 @@ const db = require("quick.db");
  */
 function LegacyEvg(filename, isTable, ignoreErrors) {
 
-    var storageSrc = __dirname + "/" + filename + ".json";
+    var storageSrc = __dirname + "/storage/" + filename + ".json";
 
     function getLS() {
 
@@ -30,6 +30,8 @@ function LegacyEvg(filename, isTable, ignoreErrors) {
         storage = filename == "" ? db.all() : db.get(filename);
       }
       else {
+        if (!fs.existsSync(storageSrc)) return false;
+
         try {
             //Gets json file, and converts into JS object
             storage = JSON.parse(fs.readFileSync(storageSrc));
@@ -230,23 +232,27 @@ function Evg(tablePath, parentPath) {
    * @param {boolean} [del] - Delete the JSON file after importing (one-time import)
    */
   this.importJSON = (filename, del) => {
-    var legacy = new LegacyEvg(filename, false, "ignore errors");
+    var filepath = __dirname + "/storage/" + filename + ".json";
+    if (!fs.existsSync(filepath)) return this;
+    
+    var legacy = new LegacyEvg(filename, false, false);
     var json = legacy.get();
 
-    if (json && typeof json === "object" && !Array.isArray(json)) {
+    if (typeof json === "object" && !Array.isArray(json)) {
       Object.keys(json).forEach(key => !this.has(key) ? this.set(key, json[key]) : "");
     }
     else if (Array.isArray(json)) {
       json.forEach(item => !this.find(val => val == item) ? this.push(item) : "");
     }
 
-    if (del) {
+    if (del && fs.existsSync(filepath)) {
       try {
-        fs.unlinkSync(__dirname + "/storage/" + filename + ".json");
+        fs.unlinkSync(filepath);
       }
       catch (err) {
         //File already deleted.
-        //Catch but ignore the error
+        //Catch the error
+        console.log("An error occurred when deleting a JSON file.");
       }
     }
 

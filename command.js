@@ -1,4 +1,4 @@
-//Jay Command Handler v2.0
+//Jay's Command Class v2.0
 //Now includes simplified constructor, command cooldown, alias options, channel restrictions, and DM-only commands.
 
 const aliasCache = require("./commands/aliases");

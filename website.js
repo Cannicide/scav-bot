@@ -1,19 +1,6 @@
 var DiscordSRZ = require("./discordsrz");
-var stats = require("./evg").resolve("statistics");
 var srz = require("./evg").resolve("srz");
-var evidence = require("./evg").resolve("staff-evidence");
-const fileUpload = require('express-fileupload');
 const fetch = require("node-fetch");
-
-function randomIdentifier() {
-  var res = "";
-  
-  for (var i = 0; i < 11; i++) {
-    res += "" + Math.floor(Math.random() * 9);
-  }
-  
-  return res;
-}
 
 function isImage(url) {
   var splitter = url.split(".");
@@ -34,10 +21,6 @@ function isImage(url) {
 function setup(app, disc) {
     const bodyParser = require("body-parser");
     app.use(bodyParser.urlencoded({ extended: true }));
-  
-  app.use(fileUpload({
-    createParentPath: true
-  }));
     
     app.get("/", (req, res) => {
         res.send("Sup, I'm the Scav Discord Bot. I don't have a fancy website yet. Blame Cannicide, he's too lazy to make one. As soon as it's made, it'll be here.");
@@ -50,12 +33,22 @@ function setup(app, disc) {
     res.send(disc.users.cache.find(m => m.tag == tag).displayAvatarURL());
   });
   
-  app.get("/statistics/json", (req, res) => {
-      res.send(stats.all());
+  app.get("/tag/from/:id", (req, res) => {
+    if (!req.params.id) return res.send("Nope");
+    var user = disc.users.cache.find(m => m.id == req.params.id);
+    
+    if (!user) return res.send("Nope");
+    res.send(user.tag);
   });
-
-  app.get("/statistics/", (req, res) => {
-      res.sendFile(__dirname + "/views/statistics.html");
+  
+  app.get(process.env.STAFFLIST_URL, async (req, res) => {
+    var channel = disc.channels.cache.find(c => c.id == "780526546846875748");
+    if (!channel) return res.send("Nope; channel not found.");
+    
+    var msg = await channel.messages.fetch("789697685975203851");
+    if (!msg) return res.send("Nope; message not found.");
+    
+    res.send(msg.content);
   })
 
   app.get("/userstats/json", (req, res) => {
@@ -72,71 +65,6 @@ function setup(app, disc) {
   
   app.get(process.env.SPP_URL, (req, res) => {
     res.sendFile(__dirname + "/views/punishments.html");
-  });
-  
-  app.post(process.env.EVIDENCE_URL + "/upload", (req, res) => {
-    if (!req.files || Object.keys(req.files).length === 0) {
-      return res.status(400).send('No files were uploaded.');
-    }
-    
-    var names = [];
-    
-    Object.values(req.files).forEach(file => {
-      
-      var buffer = Buffer.from(file.data);
-      var name = randomIdentifier() + "-" + file.name.split("").reverse().join("").replace(".", "||").split("").reverse().join("");
-      
-      var base64 = buffer.toString("base64");
-      
-      evidence.set(name, base64);
-      names.push(file.name);
-      
-    });
-    
-    res.send("Successfully uploaded: " + names.join(", "));
-    
-  });
-  
-  app.get(process.env.EVIDENCE_URL + "/retrieveAll", (req, res) => {
-    
-    var items = evidence.all();
-    res.send(items);
-    
-  });
-  
-  app.get(process.env.EVIDENCE_URL + "/retrieve/:filename", (req, res) => {
-    
-    if (!req.params.filename) return res.status(500).send("No filename specified.");
-    
-    var filename = req.params.filename;
-    
-    if (!filename.match("\\|\\|")) filename = req.params.filename.split("").reverse().join("").replace(".", "||").split("").reverse().join("");
-    
-    var item = evidence.get(filename);
-    if (!item) return res.status(500).send("No file with that name found.");
-    
-    var Readable = require('stream').Readable;
-    const imgBuffer = Buffer.from(item, 'base64');
-    var s = new Readable()
-
-    s.push(imgBuffer)   
-    s.push(null);
-
-    s.pipe(res);
-    
-  });
-  
-  app.get(process.env.EVIDENCE_URL + "/remove/:filename", (req, res) => {
-    
-    if (!req.params.filename) return res.status(500).send("No filename specified.");
-    
-    var item = evidence.has(req.params.filename);
-    if (!item) return res.status(500).send("No file with that name found.");
-    
-    evidence.remove(req.params.filename);
-    
-    res.send("Successfully removed " + req.params.filename);
-    
   });
   
   app.get(process.env.EVIDENCE_URL + "/googledrive", async (req, res) => {

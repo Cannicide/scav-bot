@@ -90,7 +90,6 @@ client.once('ready', () => {
 
     //Setup statistics logger and scheduler
     var statistics = require("./commands/statistics");
-    statistics.logger(client);
     statistics.scheduler(client);
 
     //Setup giveaway scheduler

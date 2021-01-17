@@ -1,4 +1,4 @@
-//Command handler, formerly found in server.js
+//Client and command handler, formerly found in server.js
 //A better, simpler way of handling a bot
 
 //Command class
