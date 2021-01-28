@@ -1,6 +1,6 @@
 var DiscordSRZ = require("./discordsrz");
 var srz = require("./evg").resolve("srz");
-const fetch = require("node-fetch");
+// const fetch = require("node-fetch");
 
 function isImage(url) {
   var splitter = url.split(".");
@@ -61,13 +61,13 @@ function setup(app, disc) {
   
   /*app.get(process.env.EVIDENCE_URL, (req, res) => {
     res.sendFile(__dirname + "/views/evidence.html");
-  });
+  });*/
   
   app.get(process.env.SPP_URL, (req, res) => {
     res.sendFile(__dirname + "/views/punishments.html");
   });
   
-  app.get(process.env.EVIDENCE_URL + "/googledrive", async (req, res) => {
+  /*app.get(process.env.EVIDENCE_URL + "/googledrive", async (req, res) => {
     
     fetch("https://www.googleapis.com/drive/v3/files?q=%27" + process.env.EVIDENCE_GD + "%27+in+parents&key=" + process.env.GD_KEY)
     .then(res => res.json())
