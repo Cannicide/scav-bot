@@ -61,6 +61,6 @@ I also plan to drastically improve the SibyllAI chatbot, as it is pretty limited
 Scav Bot is the latest discord bot I have developed, and as such has some of the most advanced features of all of my bots. I want to get all of those advanced features into my other, more popular bots so that these features will be able to reach more people.
 
 ## Credits
-Created by **Cannicide#2753**
-Based on the features of the Panacea and Elisif discord bots, both of which were also created by Cannicide
+Created by **Cannicide#2753**\
+Based on the features of the Panacea and Elisif discord bots, both of which were also created by Cannicide\
 Largely powered by CannicideAPI
