@@ -75,7 +75,7 @@ function Queue(message) {
 
     }
 
-    this.removeSong = (keywords) => {
+    this.removeSong = (keywords, removeAll) => {
 
         reloadStorage();
 
@@ -83,16 +83,26 @@ function Queue(message) {
         var songName = storage.songs.find(s => s.name == keywords);
         var songUrl = storage.songs.find(s => keywords.match("youtube.com/watch?v=" + s.id));
 
+        var remIndex = -1;
+        var currIndex = storage.index;
+        var currItem = storage.songs[currIndex];
+
         if (songUrl) {
-            storage.songs.splice(storage.songs.lastIndexOf(songUrl), 1);
+            remIndex = storage.songs.lastIndexOf(songUrl);
+            storage.songs.splice(remIndex, 1);
         }
         else if (songKeywords) {
-            storage.songs.splice(storage.songs.lastIndexOf(songKeywords), 1);
+            remIndex = storage.songs.lastIndexOf(songKeywords);
+            storage.songs.splice(remIndex, 1);
         }
         else if (songName) {
-            storage.songs.splice(storage.songs.lastIndexOf(songName), 1);
+            remIndex = storage.songs.lastIndexOf(songName);
+            storage.songs.splice(remIndex, 1);
         }
         else return false;
+
+        if (remIndex == currIndex) storage.index = 0;
+        else if (remIndex < currIndex) storage.index = storage.songs.indexOf(currItem);
 
         saveStorage();
 
@@ -445,7 +455,7 @@ function Player(message, pargs) {
         play: (addingSong, dontDisplay) => {
             var voiceChannel = message.member.voice.channel;
             if (!voiceChannel) return message.channel.embed({desc:`You need to be in a voice channel first!`});
-            if (!pargs) return message.channel.embed({desc:`You need to specify music to search for!`});
+            if (!pargs && addingSong) return message.channel.embed({desc:`You need to specify music to search for!`});
 
             if (addingSong) queue.addSong(options.name, options.id, options.author, options.msg, options.audio, options.keywords, options.duration);
 
@@ -666,6 +676,8 @@ function Player(message, pargs) {
 
             if (message.author.id != queue.get().starter || !message.member.hasPermission("ADMINISTRATOR")) return message.channel.embed({desc:`You must be the starter of the current queue or an administrator to do that.`});
             
+            var currentItem = queue.get().songs[queue.get().index];
+
             if (removeAll) {
                 var removed = queue.removeSongs(args.join(" "));
                 message.channel.embed({desc:`Removed ${removed - 1} song(s) from the queue, **[${message.author.tag}](https://discordapp.com/channels/${message.guild.id}/${message.channel.id})**.`});
@@ -674,6 +686,14 @@ function Player(message, pargs) {
                 var removed = queue.removeSong(args.join(" "));
                 if (removed) message.channel.embed({desc:`Removed song from the queue, **[${message.author.tag}](https://discordapp.com/channels/${message.guild.id}/${message.channel.id})**.`});
                 else message.channel.embed({desc:`Failed to remove song from the queue: could not find the song in the queue.`});
+            }
+
+            //Replay music with proper index if necessary (if playing song was removed)
+            if (!queue.get().songs.find(song => song.name == currentItem.name)) {
+                queue.set("end", "skip");
+                queue.save();
+                conn.dispatcher.end();
+                methods.play(false, true);
             }
         },
         queue: () => {
