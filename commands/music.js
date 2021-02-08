@@ -389,12 +389,11 @@ function Player(message, pargs) {
                 evergreen.on("ended", speaking => {
                   
                     var end = queue.get().end;
-                    if (!end) return;
                   
-                    var nextSong = end.match("skip") ? queue.getSong() : queue.nextSong();
-                    if (end == "stopped") nextSong = false;
+                    var nextSong = end && end.match("skip") ? queue.getSong() : queue.nextSong();
+                    if (end && end == "stopped") nextSong = false;
 
-                    if (end.match("skip") && end.split("skip:")[1] == "false") nextSong = false;
+                    if (end && end.match("skip") && end.split("skip:")[1] == "false") nextSong = false;
                     end = false;
                     queue.save();
 
@@ -425,12 +424,11 @@ function Player(message, pargs) {
                     evergreen.on("ended", speaking => {
                       
                         var end = queue.get().end;
-                        if (!end) return;
                       
-                        var nextSong = end.match("skip") ? queue.getSong() : queue.nextSong();
-                        if (end == "stopped") nextSong = false;
+                        var nextSong = end && end.match("skip") ? queue.getSong() : queue.nextSong();
+                        if (end && end == "stopped") nextSong = false;
 
-                        if (end.match("skip") && end.split("skip:")[1] == "false") nextSong = false;
+                        if (end && end.match("skip") && end.split("skip:")[1] == "false") nextSong = false;
                         end = false;
                         queue.save();
                       
