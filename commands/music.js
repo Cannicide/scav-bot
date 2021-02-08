@@ -329,7 +329,7 @@ function Queue(message) {
                     storage.end = ("skip:" + song);
                     this.save();
                     conn.dispatcher.end();
-                    msg.channel.embed({desc:`Skipped to next song, **[${msg.author.tag}](https://discordapp.com/channels/${msg.guild.id}/${msg.channel.id})**.`}).then(c => {
+                    msg.channel.embed({desc:`Skipped to previous song, **[${msg.author.tag}](https://discordapp.com/channels/${msg.guild.id}/${msg.channel.id})**.`}).then(c => {
                         setTimeout(() => {
                             c.delete();
                         }, 3000);
