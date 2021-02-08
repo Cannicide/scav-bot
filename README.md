@@ -2,7 +2,7 @@
 Scav Bot, or Scavenger, the official discord bot for the ScavengerCraft minecraft server. Completely open-source and built with discord.js. Includes many of the features from zh-bot, such as suggestion reactions, as well as completely unique features such as ScavengerLink (formerly DiscordSRZ) and SibyllAI chatbot.
 
 ## Advanced and Fully Open-Source Features
-Suggestion reaction votes, polls with progress bars, minecraft and discord server statistics, moderation/management commands and features, Trello integrations, timezone and translation and definition utilities, minecraft-discord linking capabilities and leaderboards for linked users, advanced music features with progress bars and reaction controls, giveaway features, an easy-to-use paginated help command, and more!
+Suggestion reaction votes, polls with progress bars, minecraft and discord server statistics, moderation/management commands and features, Trello integrations, timezone and translation and definition utilities, minecraft-discord linking capabilities and leaderboards for linked users, advanced music features with progress bars and reaction controls, giveaway features, an easy-to-use paginated help command, a simple AI chatbot, and more!
 
 ## Platform Integrations
 Scav Bot can link with Trello boards and Minecraft plugins to deliver powerful platform integrations. Use our Trello features to automatically send upvoted suggestions to a list on a Trello board! Use our Minecraft features to allow your Minecraft players to link their Minecraft and Discord accounts, and allow linked users to view their stats on a leaderboard!
@@ -49,11 +49,14 @@ Planned, but not yet implemented, features:
 - Potentially allow users to listen to music via DMs and DM groups, if either are even possible in the Discord API
 - Find a way to further increase audio quality
 - Potentially create a radio system that is always broadcasting a predefined queue and can be accessed in a guild through commands
+- Potentially allow use of music commands and features through SibyllAI Chatbot
 
 ## The Future of Scav Bot
 I plan to further improve the systems of this bot in the future. Settings and customization updates are coming soon, as well as server-side configuration options. I will also be adding more functionality to the custom command class and handler, including additional events, more extended message object features, and more extended objects overall (such as an extended guild object).
 
 I will also be looking into removing hard-coded values throughout the code. I want to make it easier to recreate, fork, or modify this bot. Eventually, I want to merge this bot's code with that of Panacea (formerly zh-bot) and create a single Panacea bot. Since this bot shares many features with Panacea already, it makes sense for the two bots to be one and always have the most up-to-date features, instead of one or the other having a more updated version of the same feature. When I do eventually make this shift, which I won't really have the time to do anytime soon, I will update this README with information on the new Panacea bot and archive this repository.
+
+I also plan to drastically improve the SibyllAI chatbot, as it is pretty limited and inaccurate as it is now. I have already vastly recreated the system for it in my private files with working, more accurate code, but I want to first provide it with enough conversational data to be able to have a decent conversation before updating the code here. I also plan to allow manipulation of Scav Bot features such as music and polls through conversing with the chatbot, as another way of using features other than commands and reaction controls.
 
 Scav Bot is the latest discord bot I have developed, and as such has some of the most advanced features of all of my bots. I want to get all of those advanced features into my other, more popular bots so that these features will be able to reach more people.
 
