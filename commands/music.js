@@ -19,7 +19,9 @@ function Queue(message) {
         index: 0,
         loop: false,
         end: false,
-        controller: false
+        controller: false,
+        paused: true,
+        seconds: 0
     }
 
     function reloadStorage() {
@@ -40,6 +42,11 @@ function Queue(message) {
         return storage;
     }
 
+    this.set = (property, value) => {
+        reloadStorage();
+        storage[property] = value;
+    }
+
     this.save = saveStorage;
 
     this.getSong = () => {
@@ -50,7 +57,7 @@ function Queue(message) {
 
     }
 
-    this.addSong = (name, id, author, msg, audio, keywords) => {
+    this.addSong = (name, id, author, msg, audio, keywords, duration) => {
 
         reloadStorage();
 
@@ -60,7 +67,8 @@ function Queue(message) {
             url: audio,
             artist: author,
             requester: msg.author.tag,
-            keywords: keywords
+            keywords: keywords,
+            duration: duration
         });
 
         saveStorage();
@@ -180,14 +188,87 @@ function Queue(message) {
 
     }
 
+    const emotes = {
+        gui: {
+            progress: {
+                left: "<:left_progress:788105722097172490>",
+                middle: "<:middle_progress:788105722083803166>",
+                right: "<:right_progress:788105722210680842>",
+                empty: "<:no_progress:788105722017087508>"
+            }
+        }
+    }
+
+    this.createProgressBar = (percent) => {
+        //Creates a 10-emote progress bar out of 4 different types of emotes
+
+        var output = "";
+
+        //Round to the nearest ten percent
+        percent = Math.round(percent / 10) * 10;
+
+        if (percent == 0) {
+            //Simple empty bar
+
+            output = emotes.gui.progress.empty.repeat(10);
+        }
+        else if (percent == 100) {
+            //Simple full bar
+
+            output = emotes.gui.progress.left + emotes.gui.progress.middle.repeat(8) + emotes.gui.progress.right;
+        }
+        else {
+            //Partially-filled bar
+
+            //Begin the output with left side of progress bar (1/10 emotes used)
+            output = emotes.gui.progress.left;
+
+            //Number of middle progress bar sections ([x + 1]/10 emotes used)
+            var middleAmount = (percent / 10) - 1;
+
+            //Number of empty progress bar sections ([9 - x + x + 1]/10 or 10/10 emotes used)
+            var emptyAmount = 9 - middleAmount;
+
+            output += emotes.gui.progress.middle.repeat(middleAmount) + emotes.gui.progress.empty.repeat(emptyAmount);
+        }
+
+        return output;
+
+    }
+
+    this.getSeconds = (song) => {
+        var duration = song.duration;
+        var split = duration.split(":");
+        var seconds = 0;
+
+        if (split.length == 2) {
+            //Mins:secs
+            seconds = (Number(split[0]) * 60) + Number(split[1]);
+        }
+        else {
+            //Hours:mins:secs
+            seconds = (Number(split[0]) * 60 * 60) + (Number(split[1]) * 60) + Number(split[2]);
+        }
+
+        return seconds;
+    }
+
     this.displaySong = (msg/*, player*/) => {
 
         reloadStorage();
 
         var song = storage.songs[storage.index];
+        var prevController = msg.channel.messages.cache.get(storage.controller);
+
+        if (prevController) {
+            var prevEmbed = prevController.embeds[0];
+            prevEmbed.description = "*A new song controller has been generated.*\nUse `/song`, `/songcontrols`, or `/nowplaying` to generate a new song controller.";
+            prevController.edit(prevEmbed);
+            prevController.reactions.removeAll();
+        }
 
         msg.channel.embed({
-            desc: `\`(${storage.index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n` +
+            desc: `\`(${storage.index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n${this.createProgressBar(0)}\n\n` +
             `\`Requested by: ${song.requester}\``,
             thumbnail: `https://img.youtube.com/vi/${song.id}/0.jpg`
         }).then((m) => {
@@ -213,7 +294,7 @@ function Queue(message) {
                 var desc = "The queue has ended.";
                 var image = false;
                 
-                if (song) desc = `\`(${storage.index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n` +
+                if (song) desc = `\`(${storage.index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n${this.createProgressBar(0)}\n\n` +
                 `\`Requested by: ${song.requester}\``;
                 if (song) image = `https://img.youtube.com/vi/${song.id}/0.jpg`;
 
@@ -272,7 +353,7 @@ function Queue(message) {
                 var desc = "The queue has ended.";
                 var image = false;
 
-                if (song) desc = `\`(${storage.index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n` +
+                if (song) desc = `\`(${storage.index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n${this.createProgressBar(0)}\n\n` +
                 `Loop: ${storage.loop}\n` +
                 `\`Requested by: ${song.requester}\``;
                 if (song) image = `https://img.youtube.com/vi/${song.id}/0.jpg`;
@@ -297,7 +378,7 @@ function Queue(message) {
                 var desc = "The queue has ended.";
                 var image = false;
                 
-                if (song) desc = `\`(${storage.index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n` +
+                if (song) desc = `\`(${storage.index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n${this.createProgressBar(0)}\n\n` +
                 `\`Requested by: ${song.requester}\``;
                 if (song) image = `https://img.youtube.com/vi/${song.id}/0.jpg`;
 
@@ -345,6 +426,8 @@ function Queue(message) {
 
 }
 
+var intervals = {}
+
 function Player(message, pargs) {
 
     var queue = new Queue(message);
@@ -354,7 +437,8 @@ function Player(message, pargs) {
         author: "",
         msg: message,
         audio: "",
-        keywords: ""
+        keywords: "",
+        duration: ""
     }
 
     var methods = {
@@ -363,23 +447,45 @@ function Player(message, pargs) {
             if (!voiceChannel) return message.channel.embed({desc:`You need to be in a voice channel first!`});
             if (!pargs) return message.channel.embed({desc:`You need to specify music to search for!`});
 
-            if (addingSong) queue.addSong(options.name, options.id, options.author, options.msg, options.audio, options.keywords);
+            if (addingSong) queue.addSong(options.name, options.id, options.author, options.msg, options.audio, options.keywords, options.duration);
 
             var conn = message.client.voice.connections.find(val => val.channel.guild.id == message.guild.id);
             var song = queue.getSong();
-          
-            var controller = message.channel.messages.cache.get(queue.get().controller);
-            if (controller) {
-              var desc = `\`(${queue.get().index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n` +
-                `\`Requested by: ${song.requester}\``;
-              var image = `https://img.youtube.com/vi/${song.id}/0.jpg`;
+            queue.set("paused", false);
+            queue.save();
 
-              var embed = new Interface.Embed(message, {
-                  desc: desc,
-                  thumbnail: image
-              });
-              controller.edit(embed);
-            }
+            var controller;
+        
+            queue.set("seconds", 0);
+            queue.save();
+            clearInterval(intervals[message.guild.id]);
+            intervals[message.guild.id] = setInterval(() => {
+
+                controller = message.channel.messages.cache.get(queue.get().controller);
+                if (!queue.get()) {
+                    clearInterval(intervals[message.guild.id]);
+                    return;
+                }
+
+                if (queue.get().paused) return;
+
+                queue.set("seconds", queue.get().seconds + 1);
+                queue.save();
+                var percent = Math.round(queue.get().seconds / queue.getSeconds(song) * 100);
+
+                if (controller) {
+                    var desc = `\`(${queue.get().index + 1})\` **[${song.name}](https://www.youtube.com/watch?v=${song.id})**\n\n${queue.createProgressBar(percent)}\n\n` +
+                        `\`Requested by: ${song.requester}\``;
+                    var image = `https://img.youtube.com/vi/${song.id}/0.jpg`;
+
+                    var embed = new Interface.Embed(message, {
+                        desc: desc,
+                        thumbnail: image
+                    });
+                    
+                    if (controller.embeds[0].description != desc) controller.edit(embed);
+                }
+            }, 1000);
           
             if (conn) {
                 if (!dontDisplay) queue.displaySong(message);
@@ -389,12 +495,17 @@ function Player(message, pargs) {
                 evergreen.on("ended", speaking => {
                   
                     var end = queue.get().end;
+                    if (end == "paused") {
+                        queue.set("end", false);
+                        queue.save();
+                        return;
+                    }
                   
                     var nextSong = end && end.match("skip") ? queue.getSong() : queue.nextSong();
                     if (end && end == "stopped") nextSong = false;
 
                     if (end && end.match("skip") && end.split("skip:")[1] == "false") nextSong = false;
-                    end = false;
+                    queue.set("end", false);
                     queue.save();
 
                     if (!nextSong) {
@@ -402,6 +513,7 @@ function Player(message, pargs) {
                         voiceChannel.leave();
                         queue.endQueue();
                         dispatcher.destroy();
+                        clearInterval(intervals[message.guild.id]);
                     }
                     else methods.play(false, true);
 
@@ -409,7 +521,13 @@ function Player(message, pargs) {
               
                 dispatcher.on("speaking", speaking => {
                   if (!speaking) {
+                    queue.set("paused", true);
+                    queue.save();
                     evergreen.emit("ended");
+                  }
+                  else {
+                    queue.set("paused", false);
+                    queue.save();
                   }
                 });
             }
@@ -424,12 +542,17 @@ function Player(message, pargs) {
                     evergreen.on("ended", speaking => {
                       
                         var end = queue.get().end;
+                        if (end == "paused") {
+                            queue.set("end", false);
+                            queue.save();
+                            return;
+                        }
                       
                         var nextSong = end && end.match("skip") ? queue.getSong() : queue.nextSong();
                         if (end && end == "stopped") nextSong = false;
 
                         if (end && end.match("skip") && end.split("skip:")[1] == "false") nextSong = false;
-                        end = false;
+                        queue.set("end", false);
                         queue.save();
                       
                       
@@ -438,15 +561,22 @@ function Player(message, pargs) {
                             voiceChannel.leave();
                             queue.endQueue();
                             dispatcher.destroy();
+                            clearInterval(intervals[message.guild.id]);
                         }
                         else methods.play(false, true);
 
                     });
                   
                     dispatcher.on("speaking", speaking => {
-                      if (!speaking) {
-                        evergreen.emit("ended");
-                      }
+                        if (!speaking) {
+                            queue.set("paused", true);
+                            queue.save();
+                            evergreen.emit("ended");
+                        }
+                        else {
+                            queue.set("paused", false);
+                            queue.save();
+                        }
                     });
                 
                 }).catch(err => message.channel.send(`Errors found:\n \`\`\`${err}, ${err.stack}\`\`\``));
@@ -466,7 +596,7 @@ function Player(message, pargs) {
 
             if (message.author.id != queue.get().starter || !message.member.hasPermission("ADMINISTRATOR")) return message.channel.embed({desc:`You must be the starter of the current queue or an administrator to do that.`});
            
-            queue.get().end = "stopped";
+            queue.set("end", "stopped");
             queue.save();
             conn.dispatcher.end();
             message.channel.embed({desc:`Stopped music, **[${message.author.tag}](https://discordapp.com/channels/${message.guild.id}/${message.channel.id})**.`});
@@ -496,6 +626,8 @@ function Player(message, pargs) {
             if (message.author.id != queue.get().starter || !message.member.hasPermission("ADMINISTRATOR")) return message.channel.embed({desc:`You must be the starter of the current queue or an administrator to do that.`});
             if (conn.dispatcher.paused) return message.channel.embed({desc:`Music in this guild is already paused.`});
             
+            queue.set("end", "paused");
+            queue.save();
             conn.dispatcher.pause();
             message.channel.embed({desc:`Paused music, **[${message.author.tag}](https://discordapp.com/channels/${message.guild.id}/${message.channel.id})**.`});
         },
@@ -519,7 +651,7 @@ function Player(message, pargs) {
             if (isNext) queue.nextSong();
             else queue.prevSong();
 
-            queue.get().end = "skip";
+            queue.set("end", "skip");
             queue.save();
             conn.dispatcher.end();
             message.channel.embed({desc:`Skipped to next song, **[${message.author.tag}](https://discordapp.com/channels/${message.guild.id}/${message.channel.id})**.`});
@@ -611,9 +743,10 @@ function Player(message, pargs) {
                 options.author = res.details.author;
                 options.keywords = pargs.join("+");
                 options.audio = "https://cannicideapi.glitch.me/yt/name/" + options.keywords;
+                options.duration = res.details.duration;
                 var image = `https://img.youtube.com/vi/${options.id}/0.jpg`
 
-                queue.addSong(options.name, options.id, options.author, options.msg, options.audio, options.keywords);
+                queue.addSong(options.name, options.id, options.author, options.msg, options.audio, options.keywords, options.duration);
                 message.channel.embed({
                     desc: `Added **${options.name}** (uploaded by \`${options.author}\`) to the queue.`,
                     thumbnail: image
@@ -639,6 +772,7 @@ function Player(message, pargs) {
                 options.author = res.details.author;
                 options.keywords = pargs.join("+");
                 options.audio = "https://cannicideapi.glitch.me/yt/name/" + options.keywords;
+                options.duration = res.details.duration;
 
                 resolve(methods);
             })
@@ -657,7 +791,7 @@ module.exports = {
     commands: [
         new Command("play", {
             desc: "Play a specified song in the voice channel you are in. If already playing a song, the specified song will be added to the queue.",
-            cooldown: 5,
+            cooldown: 10,
             args: [
                 {
                     name: "keywords",
@@ -728,7 +862,7 @@ module.exports = {
 
         new Command("song", {
             desc: "Sends song information as well as controls for queue loop and skipping to the next/previous song in the queue.",
-            cooldown: 10,
+            cooldown: 15,
             aliases: ["songcontrols", "playcontrols", "nowplaying", "songinfo"]
         }, (message) => {
 
@@ -746,7 +880,7 @@ module.exports = {
                     optional: true
                 }
             ],
-            cooldown: 5,
+            cooldown: 10,
             aliases: ["songlist", "songs"]
         }, (message) => {
 
