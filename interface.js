@@ -207,6 +207,9 @@ function Paginator(message, embed, elements, perPage) {
     if (pages[pages.length - 1] != page && page.length != 0) pages.push(page);
     embed.embed.fields = pages[pageIndex];
 
+    embed.embed.footer = embed.embed.footer || {text: ""};
+    embed.embed.footer.text += " • " + (pages.length == 0 ? 0 : pageIndex + 1) + "/" + pages.length;
+
     new ReactionInterface(message, embed, ['⬅️', '➡️'], (m, r) => {
 
         if (r.emoji.name == '⬅️') {
@@ -218,6 +221,7 @@ function Paginator(message, embed, elements, perPage) {
             }
             else {
                 embed.embed.fields = pages[pageIndex];
+                embed.embed.footer.text = embed.embed.footer.text.substring(0, embed.embed.footer.text.lastIndexOf("•")) + "• " + (pageIndex + 1) + "/" + pages.length;
                 m.edit(embed);
             }
         }
@@ -230,6 +234,7 @@ function Paginator(message, embed, elements, perPage) {
             }
             else {
                 embed.embed.fields = pages[pageIndex];
+                embed.embed.footer.text = embed.embed.footer.text.substring(0, embed.embed.footer.text.lastIndexOf("•")) + "• " + (pageIndex + 1) + "/" + pages.length;
                 m.edit(embed);
             }
         }
