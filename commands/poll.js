@@ -514,24 +514,30 @@ function pollProgress(message, args) {
 
 }
 
-function listPolls(message) {
+async function listPolls(message) {
     //List all of the current polls (by their sorted_index) - no need for guild checks since only one guild is being used
 
     var list = polls.array();
-    var response = "";
+    var desc = false;
+    var fields = [];
+    var index = 0;
 
-    list.forEach((poll, index) => {
-        response += `**[${index}]** ${poll.question}\n`;
-    });
+    for (var poll of list) {
+        fields.push({
+            name: `**[${index++}]** ${poll.question}\n`,
+            value: `[Go to Message](https://discordapp.com/channels/${message.guild.id}/${poll.channelID}/${poll.messageID})\nStarted by: **${(await message.guild.members.fetch(poll.starter)).user.tag}**`
+        });
+    }
 
-    if (response == "") response = "No polls are currently running.";
+    if (fields.length < 1) desc = "No polls are currently running.";
 
-    var embed = new Interface.Embed(message, {
-        desc: response,
-        title: "Poll List"
-    },false, [], response);
+    var embed = {
+        desc: desc,
+        title: "Poll List",
+        fields: fields.slice(0, 2)
+    };
 
-    message.channel.send(embed);
+    message.channel.paginate(embed, fields, 3);
 
 }
 
