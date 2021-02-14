@@ -245,7 +245,8 @@ function createPoll(message, args) {
 
     //Check to make sure there aren't more than 10 maximum polls running at once
     //Admins can bypass this restriction
-    if (polls.array().length >= 10 && !message.member.hasPermission("ADMINISTRATOR")) return message.channel.send("Apologies, but there can only be a maximum of 10 polls running at once.").then(m => m.delete({timeout: 5000}));
+    //THIS RESTRICTION IS NO LONGER NECESSARY, THANKS TO POLL LIST PAGINATION
+    // if (polls.array().length >= 10 && !message.member.hasPermission("ADMINISTRATOR")) return message.channel.send("Apologies, but there can only be a maximum of 10 polls running at once.").then(m => m.delete({timeout: 5000}));
 
     //Help embed
     var helpEmbed = new Interface.Embed(message, {
