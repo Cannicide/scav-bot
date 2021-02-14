@@ -115,7 +115,7 @@ module.exports = new Command("help", {
 
       var pages = [];
       cmds.forEach((item) => {
-        if (!item.special && !item.name.startsWith("scav:")) {
+        if (!item.special && !item.isalias) {
             var res = getCommandUsage(item);
             pages.push(res);
         }
