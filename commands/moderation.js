@@ -6,7 +6,7 @@ var evg = require("../evg").remodel("moderation");
 //------------------------------USER PROPERTIES----------------------------------
 
 //Gets user (as GuildMember) using ID, mention, or tag automatically
-function getUser(message, args) {
+async function getUser(message, args) {
 
     var mention = message.mentions.members.first();
 
@@ -16,14 +16,14 @@ function getUser(message, args) {
         mention = args[0];
         var id = mention.match(/^<@!?(\d+)>$/)[1];
         
-        return message.guild.members.cache.find(m => m.id == id);
+        return await message.guild.members.fetch(id);
     }
     else if (args && args[0].length == ("274639466294149122").length && !isNaN(args[0])) {
         //Use ID to get user (user does not need to be a current member of the guild to be banned by ID)
 
         var id = args[0];
 
-        var user = message.guild.members.cache.find(m => m.id == id);
+        var user = await message.guild.members.fetch(id);
 
         return {id: id, member: user, user: user ? user.user : false};
     }
@@ -32,7 +32,8 @@ function getUser(message, args) {
 
         var tag = args.join(" ").match(/(.+#[0-9]{4})/)[0];
 
-        var user = message.guild.members.cache.find(m => m.user.tag == tag);
+        var users = await message.guild.members.fetch();
+        var user = users.find(m => m.user.tag == tag);
 
         return user;
     }
@@ -94,7 +95,7 @@ function getTime() {
 //-----------------------MODERATION COMMANDS--------------------\\
 
 //Mass-deletes messages
-function doPurge(message) {
+async function doPurge(message) {
     var args = message.args;
     var purgeamnt = args[0];
     var purgelimit = Number(purgeamnt) + 1;
@@ -107,14 +108,14 @@ function doPurge(message) {
 }
 
 //Get user punishment history
-function doHistory(message) {
+async function doHistory(message) {
 
     var args = message.args;
-    var member = getUser(message, args);
+    var member = await getUser(message, args);
 
     if (!member) return message.channel.send("Please specify a valid user to get the history of. Users can be specified by mention, ID, or tag.");
 
-    var username = message.guild.members.cache.get(member.id);
+    var username = await message.guild.members.fetch(member.id);
     if (username) username = username.user.tag;
 
     var title = `History of ID: ${username || member.id}`;
@@ -134,10 +135,10 @@ function doHistory(message) {
 }
 
 //Clear user history
-function clearHistory(message) {
+async function clearHistory(message) {
 
     var args = message.args;
-    var member = getUser(message, args);
+    var member = await getUser(message, args);
 
     if (!member) return message.channel.send("Please specify a valid user to get the history of. Users can be specified by mention, ID, or tag.");
 
@@ -152,10 +153,10 @@ function clearHistory(message) {
 }
 
 //Mutes users by giving them a Muted role, and automatically gives them the Muted role back if they try to leave and rejoin the server
-function doMute(message) {
+async function doMute(message) {
 
     var args = message.args;
-    var member = getUser(message, args);
+    var member = await getUser(message, args);
     var origMember = member;
 
     if (!member) return message.channel.send("Please specify a valid user to mute. Users can be specified by mention, ID, or tag.");
@@ -182,10 +183,10 @@ function doMute(message) {
 }
 
 //Kicks the user, saving the user's roles and adding them back when they rejoin
-function doKick(message) {
+async function doKick(message) {
 
     var args = message.args;
-    var member = getUser(message, args);
+    var member = await getUser(message, args);
     var origMember = member;
 
     if (!member) return message.channel.send("Please specify a valid user to kick. Users can be specified by mention, ID, or tag.");
@@ -211,10 +212,10 @@ function doKick(message) {
 }
 
 //Bans the user
-function doBan(message, isPerma) {
+async function doBan(message, isPerma) {
 
     var args = message.args;
-    var member = getUser(message, args);
+    var member = await getUser(message, args);
     var origMember = member;
 
     if (!member) return message.channel.send("Please specify a valid user to ban. Users can be specified by mention, ID, or tag.");
@@ -249,17 +250,17 @@ function doBan(message, isPerma) {
 
 //Bans the user, and keeps them banned even if someone unbans them, until unbanned using the bot's unban command
 //This is designed for potentially high-profile bans or when non-administrator staff members with unban perms may be compromised
-function doPermaBan(message) {
+async function doPermaBan(message) {
 
-    doBan(message, true);
+    await doBan(message, true);
 
 }
 
 //Unmutes the user
-function doUnmute(message) {
+async function doUnmute(message) {
 
     var args = message.args;
-    var member = getUser(message, args);
+    var member = await getUser(message, args);
     var origMember = member;
 
     if (!member) return message.channel.send("Please specify a valid user to unmute. Users can be specified by mention, ID, or tag.");
@@ -286,10 +287,10 @@ function doUnmute(message) {
 }
 
 //Unbans the user (including perma and non-perma bans)
-function doUnban(message) {
+async function doUnban(message) {
 
     var args = message.args;
-    var member = getUser(message, args);
+    var member = await getUser(message, args);
 
     if (!member) return message.channel.send("Please specify a valid user to unban. Users can be specified by mention, ID, or tag.");
 
