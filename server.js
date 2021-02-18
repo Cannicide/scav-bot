@@ -49,6 +49,37 @@ client.once('ready', () => {
         }
     });
 
+    //Setup requirement of using suggestion reactions in suggestion channels:
+    Interpreter.register({
+        type: "message",
+        filter: (m, args) => !args[0].toLowerCase().match("suggestion:") && m.channel.name.toLowerCase().match("suggestions") && !m.member.roles.cache.find(x => x.name == "Staff"),
+        response: (message) => {
+
+            var Embed = require("./interface").Embed;
+            var funSuggestions = [
+                "Try to blame Music4lity more",
+                "Rename Strayyamate to Streeyamate",
+                "Avoid using #BlameJay anywhere",
+                "Change the IP to scav.computer because TVs are irrelevant",
+                "Promote Music to Head-Head Owner",
+                "Rename Saturday to Scyxer Day",
+                "Remove Herobrine",
+                "Change the server version to Minecraft Alpha or else"
+            ];
+
+            var sugg = funSuggestions[Math.floor(Math.random() * funSuggestions.length)];
+
+            message.channel.send(new Embed(message, {
+                desc: `Hello ${message.author.tag},\n**Please use the format \`Suggestion: <your suggestion>\` to make suggestions**.\n\nExample:\n\`\`\`fix\nSuggestion: ${sugg}\n\`\`\`\n\nTo make it easier to read through suggestions and avoid clogging up suggestion channels, please take all discussion of suggestions to the general discussion channels.`
+            }))
+            .then(m => {
+                m.delete({timeout: 15000});
+            });
+
+            message.delete({timeout: 250});
+        }
+    });
+
     //Register Sibyll interpreter:
     const sibyll = require("./sibyll/sibyll");
     Interpreter.register({
