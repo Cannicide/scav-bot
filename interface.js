@@ -151,8 +151,9 @@ function Interface(message, question, callback, type, options) {
  * @param {Object} message - Discord message object
  * @param {String} question - Message to send and collect reactions from
  * @param {function(message, reaction)} callback - Callback to execute on collect
+ * @param {Number} [time] - Optional time in milliseconds to wait for reaction
  */
-function ReactionInterface(message, question, reactions, callback) {
+function ReactionInterface(message, question, reactions, callback, time) {
 
     message.channel.send(question).then(m => {
 
@@ -163,7 +164,7 @@ function ReactionInterface(message, question, reactions, callback) {
             if (previous) previous = previous.then(r => {return m.react(reaction)})
             else previous = m.react(reaction);
 
-            let collector = m.createReactionCollector((r, user) => (r.emoji.name === reaction || r.emoji.id === reaction) && user.id === message.author.id, { time: 120000 });
+            let collector = m.createReactionCollector((r, user) => (r.emoji.name === reaction || r.emoji.id === reaction) && user.id === message.author.id, { time: time || 120000 });
 
             collector.on("collect", r => {
                 r.users.remove(message.author);
@@ -239,7 +240,7 @@ function Paginator(message, embed, elements, perPage) {
             }
         }
 
-    });
+    }, 1000 * 60 * 60);
 
 }
 
