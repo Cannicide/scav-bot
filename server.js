@@ -104,6 +104,10 @@ client.once('ready', () => {
     const polls = require("./commands/poll");
     polls.initialize();
 
+    //Register checklist interpreters:
+    const checklists = require("./commands/checklist");
+    checklists.initialize();
+
     //Setup DiscordSRZ
     const DiscordSRZ = require("./discordsrz");
     DiscordSRZ.initialize(client);
