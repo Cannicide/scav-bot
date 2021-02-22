@@ -86,6 +86,12 @@ var utilities = {
 
         //Handle checking by saving check data to reactions db and ending the checklist when 100% progress is hit
 
+        //If (another user + the bot) have already made this reaction, then remove this user's reaction and return
+        if (reaction.count >= 3) {
+            reaction.users.remove(user);
+            return;
+        }
+
         //Find sorted index of the current poll, and index of reaction
         var index = utilities.checklists.findSortedIndex(reaction.message.id);
         var reaction_index = emotes.unchecked.ids.indexOf(reaction.emoji.id);
@@ -136,6 +142,12 @@ var utilities = {
     handleUnchecking: (reaction, user) => {
 
         //Handle unchecking by saving check data to reactions db
+
+        //If (another user + the bot) have already made this reaction, then remove this user's reaction and return
+        if (reaction.count >= 2) {
+            reaction.users.remove(user);
+            return;
+        }
 
         //Find sorted index of the current checklist, and index of reaction
         var index = utilities.checklists.findSortedIndex(reaction.message.id);
