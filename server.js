@@ -11,6 +11,8 @@ const client = new Handler.Client({
 });
 
 var Interpreter = require("./interpreter");
+const fetch = require("node-fetch");
+const Interface = require("./interface");
 
 //Setup website
 require("./website").setup(Handler.express, client);
@@ -49,13 +51,83 @@ client.once('ready', () => {
         }
     });
 
+    //Setup sharetext txt file to paginated embed feature:
+    Interpreter.register({
+        type: "message",
+        filter: (m) => m.guild && m.attachments && m.attachments.first() && m.attachments.first().name.endsWith(".txt") && m.member && m.member.roles.cache.find(x => x.name == "Staff"),
+        response: (message) => {
+            var url = message.attachments.first().url;
+
+            new Interface.ReactionInterface(message, `Hello **${message.author.username}**! I've detected a TXT file named *\`${message.attachments.first().name}\`* in the message you just sent. Would you like to view its contents within Discord?`, ["✅", "669928674119778304"], (menu, reaction) => {
+
+                if (reaction.emoji.name == "✅") {
+
+                    fetch(url).then(response => response.buffer())
+                    .then(buffer => {
+
+                        var text = Buffer.from(buffer).toString("utf8");
+                        var elements = [];
+                        var count = 0;
+                        var page = "";
+
+                        for (var letter of text.split("")) {
+
+                            count+=letter.length;
+                            if (count < 500) page += letter;
+                            else {
+                                elements.push({
+                                    name: "** **",
+                                    value: page,
+                                    inline: false
+                                });
+
+                                count = 0;
+                                page = "";
+        
+                            }
+                        
+                        }
+
+                        if (!elements.find(elem => elem.value == page)) elements.push({
+                            name: "** **",
+                            value: page,
+                            inline: false
+                        });
+
+                        var embed = new Interface.Embed(message, {
+                            title: message.attachments.first().name,
+                            desc: "*__Preview of txt file__*\n\n** **",
+                            fields: elements
+                        });
+
+                        new Interface.Paginator(message, embed, elements, 1);
+                        menu.delete({timeout: 1000});
+
+                    }).catch((err) => {
+
+                        message.channel.send(`An error occurred:\n\`\`\`js\n${err.stack}\`\`\``);
+                        console.log("An error occurred: " + err.stack);
+
+                    });
+
+                }
+                else {
+                    menu.edit("Okay, I won't display the contents of the TXT file here.");
+                    menu.delete({timeout: 3000});
+                }
+
+            });
+
+        }
+    });
+
     //Setup requirement of using suggestion reactions in suggestion channels:
     Interpreter.register({
         type: "message",
         filter: (m, args) => !args[0].toLowerCase().match("suggestion:") && m.channel.name.toLowerCase().match("suggestions") && !m.member.roles.cache.find(x => x.name == "Staff"),
         response: (message) => {
 
-            var Embed = require("./interface").Embed;
+            var Embed = Interface.Embed;
             var funSuggestions = [
                 "Try to blame Music4lity more",
                 "Rename Strayyamate to Streeyamate",
