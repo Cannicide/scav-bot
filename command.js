@@ -248,7 +248,7 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
 
               if ("content" in options) embed.content = options.content;
 
-              advChannel.send(embed);
+              return advChannel.send(embed);
 
             };
 
