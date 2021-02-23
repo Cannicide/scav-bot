@@ -244,7 +244,12 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
            * @param {Boolean} [options.useTimestamp] - Whether or not to include the timestamp in the Embed.
            */
             advChannel.embed = (options) => {
-              advChannel.send(new Interface.Embed(advMessage, options));
+              var embed = new Interface.Embed(advMessage, options);
+
+              if ("content" in options) embed.content = options.content;
+
+              advChannel.send(embed);
+
             };
 
             advChannel.textInterface = (question, callback) => {
