@@ -172,13 +172,13 @@ client.once('ready', () => {
         }
     });
 
-    //Register poll interpreters:
-    const polls = require("./commands/poll");
-    polls.initialize();
+    // //Register poll interpreters:
+    // const polls = require("./commands/poll");
+    // polls.initialize();
 
-    //Register checklist interpreters:
-    const checklists = require("./commands/checklist");
-    checklists.initialize();
+    // //Register checklist interpreters:
+    // const checklists = require("./commands/checklist");
+    // checklists.initialize();
 
     //Setup DiscordSRZ
     const DiscordSRZ = require("./discordsrz");
@@ -204,7 +204,7 @@ client.on('message', message => {
         if (message.guild === null) {
             
             //Interpret for DiscordSRZ code
-            Interpreter.dm(message, message.content.split(" "));
+            Interpreter.handleDm(message, message.content.split(" "));
 
             return false;
         }
@@ -214,7 +214,7 @@ client.on('message', message => {
 
         //Handle messages to be interpreted:
         if (!cmd) {
-            Interpreter.message(message, message.content.split(" "));
+            Interpreter.handleMessage(message, message.content.split(" "));
         }
 
     }
@@ -224,11 +224,11 @@ client.on('message', message => {
 });
 
 client.on("messageReactionAdd", (r, user) => {
-    Interpreter.reaction(r, user, true);
+    Interpreter.handleReaction(r, user, true);
 });
 
 client.on("messageReactionRemove", (r, user) => {
-    Interpreter.reaction(r, user, false);
+    Interpreter.handleReaction(r, user, false);
 });
 
 //Added token

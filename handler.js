@@ -39,6 +39,10 @@ function initialize(directory, prefix) {
             file.commands.forEach((alias) => {
                 if (alias instanceof Command) requisites.push(alias);
             })
+
+            if (typeof file.initialize === 'function') {
+              file.initialize();
+            }
         }
     });
 
