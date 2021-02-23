@@ -18,14 +18,22 @@ function convertToTime(str) {
     //Converts time strings such as "3h" to the proper time (3 hours, in milliseconds)
     //Minimum time allowed is 1m
 
-    var time = Number(str.replace(/[^0-9]+/g, ""));
-    var unit = str.replace(/[0-9]+/g, "");
+    let ms = require('ms');
 
-    if (unit.match(/mi/gi) || unit.toLowerCase() == "m") return time * 1000 * 60; //mins (and avoiding "months")
-    else if (unit.match(/h/gi) && !unit.match(/month/gi)) return time * 1000 * 60 * 60; //hours (and avoiding "months")
-    else if (unit.match(/d/gi) && !unit.match(/sec/gi)) return time * 1000 * 60 * 60 * 24; //days (and avoiding "seconds")
-    else if (unit.match(/w/gi)) return time * 1000 * 60 * 60 * 24 * 7; //weeks
-    else return 60 * 1000; //Set to minimum time, if below minimum is provided
+    let result = ms(str);
+
+    if (result > ms("2 months")) result = ms("2 months"); //Maximum time allowed is 2 months
+
+    return result;
+
+    // var time = Number(str.replace(/[^0-9]+/g, ""));
+    // var unit = str.replace(/[0-9]+/g, "");
+
+    // if (unit.match(/mi/gi) || unit.toLowerCase() == "m") return time * 1000 * 60; //mins (and avoiding "months")
+    // else if (unit.match(/h/gi) && !unit.match(/month/gi)) return time * 1000 * 60 * 60; //hours (and avoiding "months")
+    // else if (unit.match(/d/gi) && !unit.match(/sec/gi)) return time * 1000 * 60 * 60 * 24; //days (and avoiding "seconds")
+    // else if (unit.match(/w/gi)) return time * 1000 * 60 * 60 * 24 * 7; //weeks
+    // else return 60 * 1000; //Set to minimum time, if below minimum is provided
 }
 
 function giveawayScheduler(client) {
