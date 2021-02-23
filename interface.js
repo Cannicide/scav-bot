@@ -48,8 +48,9 @@ function FancyMessage(title, question, bullets, options) {
  * @param {String} [options.image] - The URL of the Embed's image.
  * @param {String} [options.video] - The URL of the Embed's video.
  * @param {Boolean} [options.noTimestamp] - Whether or not to remove the timestamp from the Embed.
+ * @param {String} [options.content] - The plain text content of the message itself.
  */
-function EmbedMessage(message, {thumbnail, fields, desc, title, footer, icon, image, video, noTimestamp}) {
+function EmbedMessage(message, {thumbnail, fields, desc, title, footer, icon, image, video, noTimestamp, content}) {
 
     let userID = message.author.id;
     var tuser = message.client.users.cache.find(m => m.id == userID);
@@ -77,6 +78,7 @@ function EmbedMessage(message, {thumbnail, fields, desc, title, footer, icon, im
     };
 
     if (!thumbnail) embed.embed.thumbnail = {};
+    if (content) embed.content = content;
 
     embed.remove = (property) => {
       delete embed.embed[property];

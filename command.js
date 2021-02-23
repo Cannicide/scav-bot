@@ -245,11 +245,7 @@ function Command(name, {perms = false, roles = false, invisible = false, desc = 
            */
             advChannel.embed = (options) => {
               var embed = new Interface.Embed(advMessage, options);
-
-              if ("content" in options) embed.content = options.content;
-
               return advChannel.send(embed);
-
             };
 
             advChannel.textInterface = (question, callback) => {
