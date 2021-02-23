@@ -14,7 +14,7 @@ function Interpreter() {
     /**
      * Interprets a guild message. Formerly named 'interpret()'.
      */
-    this.message = (message, args) => {
+    this.handleMessage = (message, args) => {
 
         //Message interpreter format:
         /*
@@ -33,7 +33,7 @@ function Interpreter() {
     /**
      * Interprets a DM (direct message). Formerly named 'interpretDM()'.
      */
-    this.dm = (message, args) => {
+    this.handleDm = (message, args) => {
 
         //DM interpreter format:
         /*
@@ -52,7 +52,7 @@ function Interpreter() {
     /**
      * Inteprets a reaction. Formerly named 'interpretReaction()'.
      */
-    this.reaction = (reaction, user, isAdding) => {
+    this.handleReaction = (reaction, user, isAdding) => {
 
         if (user.bot) return;
 
@@ -138,6 +138,13 @@ function Interpreter() {
     }
 
     /**
+     * Returns a ReactionInterpreter object with utility methods to manipulate Reaction Interpreter data.
+     * 
+     * @param {*} type - The type or category of the Reaction Interpreter
+     */
+    this.getReactionInterpreter = (type) => new ReactionInterpreter(type, this);
+
+    /**
      * Initializes all Interpreters. Formerly named 'fetchReactionInterpreters()'.
      */
     this.initialize = (client) => {
@@ -155,6 +162,82 @@ function Interpreter() {
         
     }
 
+}
+
+/**
+ * A class representing a Reaction Interpreter, containing various utility methods to interact with Reaction Interpreter data.
+ * 
+ * @param {String} type - The specific type or category of the Reaction Interpreter
+ * @param {Interface} Interpreter - The Interpreter object for this bot
+ */
+function ReactionInterpreter(type, Interpreter) {
+
+  var Reactions = evg.resolve("reactions");
+
+  var utilities = {
+
+    type: type,
+
+    /**
+     * 
+     * @param {Object} message - The Discord message object to create the Reaction Interpreter on
+     * @param {Object} user - The user that created the Reaction Interpreter
+     * @param {String[]} emotes - An array of emotes for the Reaction Interpreter to interpret
+     * @param {Object} [customProperties] - Custom properties for the Reaction Interpreter in the format: {"property": "value"}
+     */
+    add: (message, user, emotes, customProperties) => {
+
+      var item = {
+          name: [],
+          id: [],
+          type: type,
+          messageID: message.id,
+          channelID: message.channel.id,
+          starter: user.id
+      };
+
+      emotes.forEach(emote => {
+
+        if (isNaN(emote)) item.name.push(emote);
+        else item.id.push(emote);
+
+      });
+
+      Object.keys(customProperties).forEach(key => {
+
+        item[key] = customProperties[key];
+
+      });
+
+      Interpreter.addReaction(emotes, item);
+
+      return true;
+
+    },
+    remove: (sorted_index) => {
+        var index = utilities.findIndex(sorted_index);
+        Reactions.splice(index, 1);
+    },
+    array: () => {
+        var list = Reactions.filter(item => item.type == type);
+        return list;
+    },
+    fetch: (sorted_index) => {
+        var sorted = utilities.array();
+        return sorted[sorted_index];
+    },
+    findIndex: (sorted_index) => {
+        var messageID = utilities.fetch(sorted_index).messageID;
+        var index = Reactions.values().findIndex(item => item.messageID == messageID && item.type == type);
+        return index;
+    },
+    findSortedIndex: (messageID) => {
+        var sorted = utilities.array();
+        return sorted.findIndex(item => item.messageID == messageID);
+    }
+  }
+
+  return utilities;
 }
 
 module.exports = new Interpreter();
