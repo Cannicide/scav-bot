@@ -232,12 +232,12 @@ async function doBan(message, isPerma) {
     if (!origMember.user) {
         //User to be banned does not exist in current guild, but can still be banned (ban by ID)
 
-        message.guild.members.ban(origMember.id, reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to ban user \`${name}\`. I may be missing permissions to do so, or that user ID may not exist.`));
+        message.guild.members.ban(origMember.id, {reason: reason + " - " + message.author.tag}).catch(() => message.channel.send(`I wasn't able to ban user \`${name}\`. I may be missing permissions to do so, or that user ID may not exist.`));
 
     }
     else {
 
-        member.ban(reason + " - " + message.author.tag).catch(() => message.channel.send(`I wasn't able to ban user \`${name}\`. I may be missing permissions to do so.`));
+        member.ban({reason: reason + " - " + message.author.tag}).catch((e) => message.channel.send(`I wasn't able to ban user \`${name}\`. I may be missing permissions to do so.`));
     
     }
     
@@ -245,6 +245,46 @@ async function doBan(message, isPerma) {
 
     evg.table(origMember.id).table("history").push(`${isPerma ? "Permabanned" : "Banned"} at ${getTime()} with reason: ${reason}`);
     if (isPerma) evg.table(origMember.id).set("permabanned", true);
+
+}
+
+//Tempbans the user
+async function doTempBan(message) {
+
+    var args = message.args;
+    var member = await getUser(message, args);
+    var origMember = member;
+
+    if (!member) return message.channel.send("Please specify a valid user to ban. Users can be specified by mention, ID, or tag.");
+
+    var name = member.user ? member.user.username : member.id;
+    if (userHasProperty(member.id, "permabanned")) return message.channel.send(`User \`${name}\` is already permabanned.`);
+
+    //Time to ban in days
+    var time = args[1];
+    time = time.match(/([0-9]+)/g);
+
+    var reason = args.length > 2 ? args.slice(2).join(" ") : "Unknown reason";
+    if (reason.match(/(#[0-9]{4})/)) reason = reason.split(/#[0-9]{4}/)[1];
+
+    //Accounts for ID
+    if ("member" in member) member = member.member;
+
+    if (!origMember.user) {
+        //User to be banned does not exist in current guild, but can still be banned (ban by ID)
+
+        message.guild.members.ban(origMember.id, {days: time, reason: reason + " - " + message.author.tag}).catch(() => message.channel.send(`I wasn't able to tempban user \`${name}\`. I may be missing permissions to do so, or that user ID may not exist.`));
+
+    }
+    else {
+
+        member.ban({days: time, reason: reason + " - " + message.author.tag}).catch((e) => message.channel.send(`I wasn't able to tempban user \`${name}\`. I may be missing permissions to do so.`));
+    
+    }
+    
+    message.reply(`tempbanned user \`${name}\`.`);
+
+    evg.table(origMember.id).table("history").push(`Tempbanned at ${getTime()} for ${time} days with reason: ${reason}`);
 
 }
 
@@ -433,6 +473,25 @@ var moderation = {
             }
         ]
     }, doBan),
+
+    tempban: new Command("tempban", {
+        roles: ["Pre-Mod", "Mod", "Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"],
+        desc: "Moderation command to tempban a user for a specified number of days.",
+        args: [
+            {
+                name: "user",
+                feedback: "Please specify a user to ban."
+            },
+            {
+                name: "days",
+                feedback: "Please specify the number of days to ban the user for."
+            },
+            {
+                name: "reason",
+                optional: true
+            }
+        ]
+    }, doTempBan),
 
     permaban: new Command("permaban", {
         perms: ["ADMINISTRATOR"],
