@@ -3,9 +3,30 @@ var Command = require("../command");
 var Trello = require('trello-node-api')(process.env.TRELLO_KEY, process.env.TRELLO_TOKEN);
 var Embed = require("../interface").Embed;
 
+const labels = [
+    "60413aba184d2c731ba52187", //Unanimous label
+    "60413aba184d2c731ba52188", //Very Popular,
+    "60413aba184d2c731ba5218c", //Somewhat Popular
+    "6041545236d17c8666683e0f", //Barely Popular
+    "60413aba184d2c731ba5218d" //50/50 Split
+].reverse();
+
+function labelFromPopularity(percent) {
+    var chunk = (percent - 50) * (labels.length - 1) / 50;
+    var output = 0;
+
+    if (chunk == 4) output = 4;
+    else if (chunk > 3) output = 3;
+    else if (chunk > 1) output = 2;
+    else if (chunk > 0) output = 1;
+
+    return (labels[output]);
+}
+
 module.exports = new Command("clearsuggestions", {
     roles: ["Head Mod", "Admin", "System Administrator", "Head Admin", "Owner"],
-    desc: "Clears the suggestions channels and automatically posts popular suggestions to our trello."
+    desc: "Clears the suggestions channels and automatically posts popular suggestions to our trello.",
+    aliases: ["cls", "clsuggestions"]
 }, (message) => {
 
     //Check if channel is a suggestions channel
@@ -23,21 +44,27 @@ module.exports = new Command("clearsuggestions", {
             var yeas = message.reactions.cache.get("713053971757006950");
             var nays = message.reactions.cache.get("713053971211878452");
 
-            if (!yeas || !nays || yeas.count <= nays.count) return;
+            if (!yeas || !nays || yeas.count < nays.count) return;
 
             var suggestion = {
                 yeas: yeas.count - 1,
                 nays: nays.count - 1,
-                desc: ""   
+                desc: "",
+                author: ""
             }
             
             suggestion.desc = message.content.substring(12);
+            suggestion.author = message.author.tag;
 
             suggestions.push(suggestion);
         });
 
         //Sort from most to least yea votes
         suggestions = suggestions.sort((a, b) => b.yeas - a.yeas);
+      
+        var list = process.env.SUGGESTION_LIST;
+      
+        if (message.channel.name.toLowerCase().match("staff")) list = process.env.STAFF_SUGGESTION_LIST;
 
         //Create trello cards for each suggestion
         async function createCards() {
@@ -46,18 +73,20 @@ module.exports = new Command("clearsuggestions", {
 
                 var vote_total = suggestion.yeas + suggestion.nays;
                 var yeas_percent = Math.round(suggestion.yeas / vote_total * 100);
-                var nays_percent = Math.round(suggestion.nays / vote_total * 100);
+                // var nays_percent = Math.round(suggestion.nays / vote_total * 100);
+
+                var label = labelFromPopularity(yeas_percent);
 
                 var data = {
-                    name: `${suggestion.desc}       [Yeas: ${suggestion.yeas} | Nays: ${suggestion.nays}]`,
-                    desc: `Suggestion cleared by: ${message.author.tag}\nCard added by Scavenger Bot\nYea votes: ${suggestion.yeas}/${vote_total} (${yeas_percent}%)\nNay votes: ${suggestion.nays}/${vote_total} (${nays_percent}%)`,
+                    name: `${suggestion.desc}`,
+                    desc: `${suggestion.yeas} Yea / ${suggestion.nays} Nay \n (${suggestion.author}) \n\n[Added by Scavenger]`,
                     pos: 'bottom',
-                    idList: process.env.SUGGESTION_LIST, //REQUIRED
+                    idList: list, //REQUIRED
                     due: null,
                     dueComplete: false,
                     idMembers: [],
-                    idLabels: [],
-                    urlSource: false
+                    idLabels: [label],
+                    urlSource: null
                 };
 
                 await Trello.card.create(data);
@@ -79,10 +108,10 @@ module.exports = new Command("clearsuggestions", {
 
         //Delete channel and log the channel clearing in the logs channel
         message.channel.delete("Cleared and cloned suggestions channel.").then(m => {
-            var logs = message.guild.channels.cache.find(c => c.name == "dyno-reports");
+            var logs = message.guild.channels.cache.find(c => c.name.match("scavenger-logs"));
             var embed = new Embed(message, {
                 thumbnail: message.guild.iconURL(), 
-                desc: "**Suggestions channel was cleared and cloned.**\nAll popular suggestions have been added to the trello."
+                desc: `**Suggestions channel was cleared and cloned.**\nBy: **\`${message.author.tag}\`**\nAll suggestions with 50% or more YEAs have been added to the trello.`
             });
 
             if (logs) logs.send(embed); 
