@@ -100,7 +100,7 @@ client.once('ready', () => {
                             fields: elements
                         });
 
-                        new Interface.Paginator(message, embed, elements, 1);
+                        new Interface.Paginator(message, embed, elements, 1, true);
                         menu.delete({timeout: 1000});
 
                     }).catch((err) => {
