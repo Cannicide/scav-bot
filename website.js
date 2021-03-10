@@ -117,6 +117,35 @@ function setup(app, disc) {
   
   app.use(bodyParser.json());
   
+  // Staff Apps Listener
+  
+  app.post(process.env.APPS_WEBHOOK, (req, res) => {
+    
+    var body = JSON.parse(req.body.body);
+    var url = req.body.url;
+    
+    var channel = disc.channels.cache.find(c => c.name.match("staff-recruitment"));
+    if (!channel) return res.status(500).send("Channel was not found");
+    
+    channel.send({
+      embed: {
+        "color": 16750336,
+        "title": `**New Staff Application**`,
+        "description": `**User:** ${body[0]}\n**Discord:** ${body[1]}\n**Age:** ${body[2]}\n**Timezone:** ${body[3]}\n\n[🔗 View](${url})`,
+        "thumbnail": {"url":`https://cannicideapi.glitch.me/mc/head/${body[0]}`},
+        "footer": {
+          "icon_url": channel.guild.iconURL({dynamic:true}),
+          "text": `Scavenger • Staff App Alert`
+        }
+      }
+    });
+    
+    res.send("Successfully beamed down: " + url);
+    
+  });
+  
+  // DiscordSRZ/ScavengerLink
+  
   app.post("/discordsrz", (req, res) => {
     console.log("DiscordSRZ:", req.body);
     new DiscordSRZ.DiscordSRZ.DataHandler(req.body);
