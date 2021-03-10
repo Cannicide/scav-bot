@@ -153,10 +153,18 @@ function Interpreter() {
 
         var cache = Reactions.values();
 
-        cache.forEach(entry => {
+        cache.forEach((entry, index) => {
             //Fetch and cache all messages that need their reactions interpreted
             client.channels.fetch(entry.channelID).then(channel => {
-                channel.messages.fetch(entry.messageID, true);
+                channel.messages.fetch(entry.messageID, true).catch(e => {
+              
+                  Reactions.splice(index);
+
+                });
+            }).catch(e => {
+              
+              Reactions.splice(index);
+              
             });
         });
         
