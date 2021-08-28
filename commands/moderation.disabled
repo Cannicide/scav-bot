@@ -1,3 +1,11 @@
+
+/*
+    TO BE REWRITTEN
+    This module will be entirely rewritten to use the node-elisif moderation expansion, once I finish it.
+    For now, moderation will be entirely disabled.
+*/
+
+/*
 //Moderation commands for Scavenger
 
 var Command = require("../command");
@@ -530,4 +538,4 @@ var commands = Object.values(moderation);
 moderation.keepMuted = keepMuted;
 moderation.keepPermabanned = keepPermabanned;
 
-module.exports = {commands: commands, moderation: moderation};
+module.exports = {commands: commands, moderation: moderation};*/

@@ -1,51 +1,51 @@
 //Meme command to create image definitions with custom text
 
-var Command = require("../command");
+const { SlashCommand } = require("elisif");
+const { ArgumentBuilder } = SlashCommand;
 
-module.exports = new Command("define", {
-    desc: "Meme command to generate an image definition with custom text; word and definition separated by pipe (`|`) character.",
+module.exports = new SlashCommand({
+    name: "define",
+    desc: "Generate an image with an actual word definition, or with a custom meme definition!",
+    guilds: JSON.parse(process.env.SLASH_GUILDS),
     args: [
-        {
-            name: "word",
-            optional: false
-        },
-        {
-            name: " | definition",
-            optional: true
+        new ArgumentBuilder()
+        .setName("word")
+        .setDescription("The word you want to define.")
+        .setType("string"),
+        new ArgumentBuilder()
+        .setName("definition")
+        .setDescription("Custom text to use instead of the actual word definition.")
+        .setType("string")
+        .setOptional(true)
+    ],
+
+    execute(slash) {
+
+        let attachment;
+        let args = slash.flatArgs;
+
+        if (args.length == 1 && args[0]) {
+            //Define actual word
+
+            attachment = `https://cannicideapi.glitch.me/lang/define/image?q=${args[0].replace(/ /g, "+")}`;
+
+            slash.reply({files: [{
+                attachment,
+                name: `${args[0]}-definition.png`
+            }]});
+
         }
-    ]
-}, (message) => {
+        else if (args.length == 2 && args[0] && args[1]) {
+            //Make meme definition
 
-    var url;
-    var args = message.args
-    args = args && args.length > 0 ? args.join(" ").split(" | ") : args;
+            attachment = `https://cannicideapi.glitch.me/memes/definition?word=${args[0].replace(/ /g, "+")}&definition=${args[1].replace(/ /g, "+")}`;
 
-    if (args.length == 1 && args[0]) {
-        //Define actual word
+            slash.reply({files: [{
+                attachment,
+                name: `${args[0]}-definition.png`
+            }]});
 
-        url = `https://cannicideapi.glitch.me/lang/define/image?q=${args[0].replace(/ /g, "+")}`;
-
-        message.channel.send({files: [{
-            attachment: url,
-            name: `${args[0]}-definition.png`
-        }]});
+        }
 
     }
-    else if (args.length == 2 && args[0] && args[1]) {
-        //Make meme definition
-
-        url = `https://cannicideapi.glitch.me/memes/definition?word=${args[0]}&definition=${args[1]}`;
-
-        message.channel.send({files: [{
-            attachment: url,
-            name: `${args[0]}-definition.png`
-        }]});
-
-    }
-    else {
-        //Error message
-
-        message.channel.send("Please specify a word and definition separated by a pipe character.\nEx: `/define Scyxer | Player who is bad at Among Us.`\n\nOr, specify just a word to fetch its real definition.\nEx: `/define Context`");
-    }
-
 });

@@ -1,34 +1,43 @@
 //Converts a time from timezone to timezone
 
-const Command = require("../command");
-const fetch = require("node-fetch");
+const { SlashCommand, fetch } = require("elisif");
+const { ArgumentBuilder } = SlashCommand;
 const cheerio = require("cheerio");
 
-module.exports = new Command("timezone", {
-  desc: "Converts a time between timezones or gets the time in the current timezone, powered by Google.",
-  aliases: ["tz"],
-  cooldown: 5,
+//Currently supported timezones; some of these may not work now or in the future, not all of them have been tested.
+//Duplicate timezone abbreviation names have also not been accounted for (i.e. CST - Central Standard Time, and CST - Chinese Standard Time)
+const timezones = "ACDT, ACST, AEDT, AEST, AET, CDT, CET, CST, CT, EDT, EST, ET, GMT, HDT, HST, IST, MST, MT, PDT, PST, PT, UTC".split(", ");
+
+module.exports = new SlashCommand({
+  name: "timezone",
+  desc: "Converts a time between timezones; powered by Google.",
+  guilds: JSON.parse(process.env.SLASH_GUILDS),
   args: [
-    {
-      name: "time with timezone",
-      feedback: "Please specify a time with timezone (ie. 6:45 PM EST)."
-    },
-    {
-      name: "to",
-      static: true
-    },
-    {
-      name: "timezone",
-      feedback: "Please specify a timezone to convert to."
-    }
-  ]
-}, (message) => {
 
-  if (message.args.length >= 4 && message.args.join("+").match("to")) {
-    //First arg is a time
-    //"To timezone" is specified; correct syntax
+    new ArgumentBuilder()
+    .setName("time")
+    .setDescription("The time you want to convert.")
+    .setType("string"),
 
-    fetch(`https://google.com/search?q=${message.args.join("+")}`)
+    new ArgumentBuilder()
+    .setName("timezoneA")
+    .setDescription("Your timezone, or the one you want to convert from.")
+    .setType("string")
+    .addChoices(timezones),
+
+    new ArgumentBuilder()
+    .setName("timezoneB")
+    .setDescription("The goal timezone, or the one you want to convert to.")
+    .setType("string")
+    .addChoices(timezones)
+
+  ],
+  execute(slash) {
+
+    let { time, timezoneA, timezoneB } = slash.mappedArgs.toObject();
+    slash.deferReply();
+
+    fetch(`https://google.com/search?q=convert+${time}+${timezoneA}+to+${timezoneB}`)
     .then(res => res.text())
     .then(body => {
       var $ = cheerio.load(body);
@@ -37,19 +46,13 @@ module.exports = new Command("timezone", {
 
       if (time == "") time = "Google was unable to convert to that timezone.";
 
-      message.channel.embed({
+      slash.editReply(slash.client.util.genEmbeds({
         desc: `**Time:** ${time}`
-      })
+      }));
     })
-    .catch(err => {
-      message.channel.send("Failed to convert the timezones; please notify Cannicide#2753.");
+    .catch(_err => {
+      slash.editReply("Failed to convert the timezones; please notify Cannicide#2753.");
     });
 
   }
-  else {
-    //"To timezone" is not specified; incorrect syntax
-
-    message.channel.send("Incorrect syntax; please do /timezone <time> <timezoneA> to <timezoneB>");
-  }
-
 });

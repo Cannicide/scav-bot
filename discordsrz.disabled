@@ -1,3 +1,6 @@
+
+// [ DISABLED UNTIL RELEASE OF KATALINA, my new in-progress Discord-Minecraft linking system ]
+
 //DiscordSRZ, my alternative to DiscordSRV
 
 const db = require("./evg").resolve("srz");

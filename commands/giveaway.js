@@ -1,269 +1,299 @@
-//Command to create giveaways!
+// @ts-check
+// Command to create giveaways!
 
-var Command = require("../command");
-var Reactions = require("../evg").resolve("giveaway");
 const schedule = require('node-schedule');
-const Interface = require("../interface");
+const ms = require("ms");
+const { SlashCommand: { SlashCommandBuilder }, evg } = require("elisif");
 
-//Currently scheduled giveaway draws
-var currentlyScheduled = [];
+class Giveaway {
 
-//Set emote used in giveaway:
-const emote = {
-    reactable: `813784688433823747`,
-    sendable: `<:giveaway:813784688433823747>`
-};
+    client;
 
-function convertToTime(str) {
-    //Converts time strings such as "3h" to the proper time (3 hours, in milliseconds)
-    //Minimum time allowed is 1m
+    //Custom giveaway emote
+    static emote = {
+        reactable: `813784688433823747`,
+        sendable: `<:giveaway:813784688433823747>`
+    };
 
-    let ms = require('ms');
+    //Currently scheduled giveaways
+    static scheduled = new Map();
 
-    let result = ms(str);
 
-    if (result > ms("2 months")) result = ms("2 months"); //Maximum time allowed is 2 months
+    constructor(client, table) {
+        this.client = client;
+        this.db = evg.resolve(table ?? "giveaway");
+    }
 
-    return result;
+    /**
+     * Converts time strings such as "3h" into milliseconds.
+     * Maximum time allowed is 1 month.
+     * Ex: "3h" -> 10800000
+    */
+    static convertTime(str) {
+    
+        let result = Number(ms(str));
+        if (result > ms("1 month")) result = ms("1 month");
+        return result;
+    }
 
-    // var time = Number(str.replace(/[^0-9]+/g, ""));
-    // var unit = str.replace(/[0-9]+/g, "");
+    /**
+     * Imports giveaways from a database table, automatically (re)scheduling each giveaway
+    */
+    import() {
 
-    // if (unit.match(/mi/gi) || unit.toLowerCase() == "m") return time * 1000 * 60; //mins (and avoiding "months")
-    // else if (unit.match(/h/gi) && !unit.match(/month/gi)) return time * 1000 * 60 * 60; //hours (and avoiding "months")
-    // else if (unit.match(/d/gi) && !unit.match(/sec/gi)) return time * 1000 * 60 * 60 * 24; //days (and avoiding "seconds")
-    // else if (unit.match(/w/gi)) return time * 1000 * 60 * 60 * 24 * 7; //weeks
-    // else return 60 * 1000; //Set to minimum time, if below minimum is provided
-}
-
-function giveawayScheduler(client) {
-
-    var giveaways = Reactions.filter(element => element.type == "giveaway");
-
-    if (giveaways) {
-
-        giveaways.forEach(giveaway => {
-
-            scheduleGiveaway(giveaway, client);
-
-        });
+        var giveaways = this.db.filter(element => element.type == "giveaway");
+        if (giveaways) giveaways.forEach(this.schedule.bind(this));
 
     }
 
-}
+    /**
+     * Schedules a giveaway.
+     * Winners are drawn after the specific time limit configured for the giveaway.
+     * If the end time has already passed (i.e. if the bot was down during the end time), the giveaway will be drawn immediately.
+    */
+    schedule(giveaway) {
 
-function scheduleGiveaway(giveaway, client) {
-
-    if (giveaway) {
+        if (!giveaway) return;
+        if (giveaway.date < Date.now()) return this.draw(giveaway, false);
 
         //Execute at proper time
-        var job = schedule.scheduleJob(giveaway.date, drawWinners.bind(null, client, giveaway, false));
-
-        currentlyScheduled.push({
-            messageID: giveaway.messageID,
-            job: job
-        });
+        var job = schedule.scheduleJob(giveaway.date, this.draw.bind(this, giveaway, false));
+        Giveaway.scheduled.set(giveaway.messageID, job);
 
     }
 
-}
+    /**
+     * Draws unique winner(s) for a giveaway.
+     * If the 'redraw' parameter is `true`, new unique winner(s) will be redrawn.
+    */
+    async draw(giveaway, redraw) {
 
-function drawWinners(client, giveaway, redraw) {
+        if (!giveaway) return;
+    
+        let channelID = giveaway.channelID;
+        let messageID = giveaway.messageID;
+        let numWinners = giveaway.numWinners;
+    
+        try {
+            let channel = await this.client.channels.fetch(channelID, true, true);
+            var m = await channel.messages.fetch(messageID, true, true);
+        }
+        catch (err) {
+            //Failed to find the channel or message of the giveaway (may be deleted); cancel giveaway
+            this.cancel(giveaway);
+            return;
+        }
 
-    if (!giveaway) return;
+        let winners = new Map();
 
-    var channelID = giveaway.channelID;
-    var messageID = giveaway.messageID;
-    var numWinners = giveaway.numWinners;
+        //Fetches all users who reacted to the message, updating the cache
+        let users = await m.reactions.cache.find(r => [r.emoji.name, r.emoji.id].includes(Giveaway.emote.reactable)).users.fetch();
+        users = users.filter(user => !user.bot);
 
-    client.channels.fetch(channelID, true, true).then(channel => {
+        //Filter out already drawn users when redrawing
+        if (redraw && giveaway.filteredIDs) users = users.filter(user => !giveaway.filteredIDs.includes(user.id));
 
-        channel.messages.fetch(messageID, true, true).then(m => {
-            var winners = {};
+        //Make sure numWinners does not exceed number of users
+        if (numWinners > users.size) numWinners = users.size;
 
-            //Fetches all users who reacted to the message, updating the cache
-            m.reactions.cache.find(r => r.emoji.name == emote.reactable || r.emoji.id == emote.reactable).users.fetch().then(users => {
+        //Obtain all winners without duplicates
+        while (Object.keys(winners).length != numWinners && Object.keys(winners).length < users.size) {
+            var winner = users.random();
+            winners.set(winner.id, winner);
+        }
 
-                users = users.filter(user => !user.bot);
+        //Convert to array
+        let results = [...winners.values()]
+        let noWinners = "*Nobody joined the giveaway :(*";
 
-                //Filter out already drawn users when redrawing
-                if (redraw && "filteredIDs" in giveaway) users = users.filter(user => !giveaway.filteredIDs.includes(user.id));
+        if (results.length == 0) results = [noWinners];
 
-                //Make sure numWinners does not exceed number of users
-                if (numWinners > users.size) numWinners = users.size;
+        let description = `**Giveaway ended**\n\nWinners:\n${Giveaway.emote.sendable} `;
+        let winnersFormatted = results.join(`\n${Giveaway.emote.sendable} `);
+        let winnerPings = results.join(" ");
 
-                //Obtains all winners without duplicates
-                while (Object.keys(winners).length != numWinners && Object.keys(winners).length < users.size) {
-                    var winner = users.random();
+        description += winnersFormatted;
 
-                    winners[winner.id] = winner;
-                }
+        let embed = m.embeds[0];
+        embed.description = description;
+        if (!redraw) m.edit(embed);
 
-                //Convert to array
-                winners = Object.values(winners);
+        if (!results.includes(noWinners)) {
+            this.client.util.Message(m).channel().embed({
+                title: `**${giveaway.desc}**`,
+                desc: `${Giveaway.emote.sendable} ${winnersFormatted}\n\n💝 **You won [the giveaway](https://discordapp.com/channels/${m.guild.id}/${m.channel.id}/${m.id})${redraw ? " reroll" : ""}!** 💝`,
+                footer: redraw ? [m.author.username, `${numWinners} redrawn winner(s)`] : [m.author.username],
+                content: winnerPings
+            });
+        }
+        else if (redraw) {
+            m.channel.send("Unable to redraw giveaway winner(s): nobody else joined the giveaway!");
+        }
 
-                var nowinners = "*Nobody joined the giveaway :(*";
+        //End giveaway
+        await this.cancel(giveaway);
+    
+    }
 
-                if (winners.length == 0) winners = [nowinners];
+    /**
+     * A utility method that redraws winners for a giveaway.
+    */
+    async redraw(giveaway, numWinners, oldWinners) {
 
-                var description = `**Giveaway ended**\n\nWinners:\n${emote.sendable} `;
-                var winnersFormatted = winners.join(`\n${emote.sendable} `);
-                var winnerPings = winners.join(" ");
+        giveaway.numWinners = numWinners;
+        giveaway.filteredIDs = oldWinners;
+    
+        return await this.draw(giveaway, true);
+    
+    }
 
-                description += winnersFormatted;
+    /**
+     * Cancels or ends a scheduled giveaway. Also used internally to end giveaways after winners are drawn.
+    */
+    async cancel(giveaway) {
 
-                var embed = m.embeds[0];
-                embed.description = description;
+        //Remove giveaway from database
+        if (this.db.values().some(a => a.type == "giveaway" && a.messageID == giveaway.messageID)) this.db.splice(this.db.values().findIndex(a => a.type == "giveaway" && a.messageID == giveaway.messageID));
 
-                if (!redraw) m.edit(embed);
+        //Remove scheduled giveaway from map
+        if (Giveaway.scheduled.has(giveaway.messageID)) Giveaway.scheduled.delete(giveaway.messageID);
+    }
 
-                if (Reactions.values().find(a => a.type == "giveaway" && a.messageID == messageID)) Reactions.splice(Reactions.values().findIndex(a => a.type == "giveaway" && a.messageID == messageID));
+    /**
+     * A utility method that returns a Date representing the end time for a giveaway, based on a time string.
+    */
+    static getEndTime(timeStr) {
+        let date = new Date();
+        date.setTime(date.getTime() + Giveaway.convertTime(timeStr));
 
-                if (!winners.includes(nowinners)) {
-                    m.channel.send(new Interface.Embed(m, {
-                        title: `**${giveaway.desc}**`,
-                        desc: `${emote.sendable} ${winnersFormatted}\n\n💝 **You won [the giveaway](https://discordapp.com/channels/${m.guild.id}/${m.channel.id}/${m.id})${redraw ? " reroll" : ""}!** 💝`,
-                        footer: redraw ? [m.author.username, `${numWinners} redrawn winner(s)`] : [m.author.username],
-                        content: winnerPings
-                    }));
-                }
-                else if (redraw) {
-                    m.channel.send("Unable to redraw giveaway winner(s): nobody else joined the giveaway!");
-                }
+        return date;
+    }
 
-                var scheduledJob = currentlyScheduled.find(job => job.messageID == messageID);
-                var scheduledJobIndex = currentlyScheduled.findIndex(job => job.messageID == messageID);
+    /**
+     * Creates a new giveaway based on parameters for time (string form), number of winners, giveaway description, and the Message object of the giveaway.
+    */
+    create(time, numWinners, desc, message) {
 
-                if (scheduledJob) {
-                    if (scheduledJob.job) scheduledJob.job.cancel();
-                    currentlyScheduled.splice(scheduledJobIndex, 1);
-                }
+        let date = Giveaway.getEndTime(time);
 
-            })
-            
+        let giveaway = {
+            type: "giveaway",
+            channelID: message.channel.id,
+            messageID: message.id,
+            numWinners,
+            date,
+            desc
+        };
 
-        });
+        this.db.push(giveaway);
+        return giveaway;
 
-    });
-
-}
-
-function redrawWinners(client, giveaway, numWinners, oldWinners) {
-
-    giveaway.numWinners = numWinners;
-    giveaway.filteredIDs = oldWinners;
-
-    drawWinners(client, giveaway, true);
+    }
 
 }
 
 module.exports = {
     commands: [
-        new Command("giveaway", {
-            perms: ["ADMINISTRATOR"],
-            desc: "Start a giveaway!",
-            args: [
-                {
-                    name: "time",
-                    feedback: "Please use the proper syntax: `/giveaway <time> <# of winners> <description>`\n\nEx: `/giveaway 30m 3 Giving away free Steam codes!`\n(Selects 3 winners after 30 minutes)\n\n*Note: Please specify a time (minimum: 1 minute).*"
-                },
-                {
-                    name: "# of winners",
-                    feedback: "*Note: Please specify the number of users that will win the giveaway.*"
-                },
-                {
-                    name: "description",
-                    feedback: "*Note: Please specify a description for the giveaway.*"
+        //@ts-ignore
+        new SlashCommandBuilder()
+        .setName('giveaway')
+        .setDescription('Create or redraw a giveaway in the server!')
+        .setPerms(['MANAGE_CHANNELS'])
+        .setGuilds(JSON.parse(process.env.SLASH_GUILDS))
+        .addSubCommand(cmd =>
+            //@ts-ignore 
+            cmd.setName("create")
+            .setDescription('Create a new giveaway!')
+            .addStringArg(arg => 
+                arg.setName("time")
+                .setDescription("The amount of time until winners are drawn (e.g. 3h).")
+            )
+            .addIntegerArg(arg =>
+                arg.setName("winners")
+                .setDescription("The number of users that can win this giveaway.")    
+            )
+            .addStringArg(arg => 
+                arg.setName("description")
+                .setDescription("The description of the giveaway (i.e. what is being given away).")    
+            )
+            .addChannelArg(arg => 
+                arg.setName("channel")
+                .setDescription("The channel to send the giveaway in. Defaults to the current channel.")
+                .setOptional(true)
+            )
+        )
+        .addSubCommand(cmd =>
+            //@ts-ignore
+            cmd.setName("redraw")
+            .setDescription("Reroll a specified giveaway.")
+            .addStringArg(arg => 
+                arg.setName("message")    
+                .setDescription("The message ID of the giveaway to be redrawn.")
+            )
+            .addIntegerArg(arg =>
+                arg.setName("winners")
+                .setDescription("The number of users to reroll in this giveaway. Defaults to the originally set number of winners.")
+                .setOptional(true)
+            )
+        )
+        .setMethod(async slash => {
+
+            slash.deferReply();
+
+            if (slash.subcommand == "create") {
+                //Giveaway creation logic
+
+                let channel = slash.getArg("channel") ?? slash.channel;
+                let message = await slash.client.util.Channel(channel, slash).embed({
+                    title: slash.getArg("description"),
+                    footer: [slash.author.username, `${slash.getArg("winners")} winner(s)`],
+                    thumbnail: slash.guild.iconURL({dynamic: true}),
+                    desc: `Guild: **[${slash.guild.name}](https://discordapp.com/channels/${slash.guild.id}/${slash.channel.id}/${slash.id})**\nWinners: **${slash.getArg("winners")}**\nEnds: **${Giveaway.getEndTime(slash.getArg("time")).toLocaleDateString()}**\nAt: **${Giveaway.getEndTime(slash.getArg("time")).toLocaleTimeString([], {hour12: true, hour: 'numeric', minute:'2-digit'})} CST**\n\nClick ${Giveaway.emote.sendable} to enter the giveaway!`
+                });
+
+                let system = new Giveaway(slash.client, "giveaway");
+                let giveaway = system.create(slash.getArg("time"), slash.getArg("winners"), slash.getArg("description"), message);
+                await system.schedule(giveaway);
+
+                slash.editReply(`Giveaway created!\n${channel.id != slash.channel.id ? "View it [here](" + message.url + ")." : "*Deleting message in (3) seconds...*"}`);
+                if (channel.id == slash.channel.id) slash.deleteReply(3);
+
+            }
+            else if (slash.subcommand == "redraw") {
+                //Giveaway redraw logic
+
+                let numWinners = slash.getArg("winners");
+                let id = slash.getArg("message");
+
+                try {
+                    var m = await slash.channel.messages.fetch(id, true, true);
                 }
-            ]
-        }, (message) => {
-
-            var args = message.args;
-
-            if (isNaN(args[1])) return message.channel.send("Please use the proper syntax: `/giveaway <time> <# of winners> <description>`\n\nEx: `/giveaway 30m 3 Giving away free Steam codes!`\n(Selects 3 winners after 30 minutes)\n\n*Note: The minimum time that can be specified is 1 minute.*");
-
-            // if (Reactions.find(element => element.type == "giveaway")) return message.channel.send("Sorry, only one giveaway can be running at a time.");
-
-            var ms_timeout = args[0];
-            var now = new Date();
-            now.setTime(now.getTime() + convertToTime(ms_timeout));
-
-            message.channel.embed({
-                title: `${args.slice(2).join(" ")}`,
-                footer: [message.author.username, `${args[1]} winner(s)`],
-                thumbnail: message.guild.iconURL({dynamic: true}),
-                desc: `Guild: **[${message.guild.name}](https://discordapp.com/channels/${message.guild.id}/${message.channel.id}/${message.id})**\nWinners: **${args[1]}**\nEnds: **${now.toLocaleDateString()}**\nAt: **${now.toLocaleTimeString([], {hour12: true, hour: 'numeric', minute:'2-digit'})} CST**\n\nClick ${emote.sendable} to enter the giveaway!`
-            }).then(m => {
-
-                var item = {
-                    type: "giveaway",
-                    channelID: message.channel.id,
-                    messageID: m.id,
-                    numWinners: args[1],
-                    date: now,
-                    desc: args.slice(2).join(" ")
-                }
-
-                Reactions.push(item);
-
-                m.react(emote.reactable).then(r => scheduleGiveaway(item, message.client));
-                message.delete({timeout: 3000});
-
-            });
-
-        }),
-
-        new Command("reroll", {
-            perms: ["ADMINISTRATOR"],
-            desc: "Reroll a specified giveaway!",
-            args: [
-                {
-                    name: "message ID",
-                    feedback: "*Note: Please specify the ID of the giveaway message.*"
-                },
-                {
-                    name: "# of winners",
-                    feedback: "*Note: Please specify the number of users to reroll in the giveaway. Specify `all` to reroll all winners.*"
-                }
-            ],
-            aliases: ["redraw"]
-        }, (message) => {
-
-            var numWinners = message.args[1];
-            var id = message.args[0];
-
-            message.channel.messages.fetch(id, true, true).then(m => {
-
-                if (m.author.id != m.client.user.id || !m.embeds || !m.embeds[0] || !m.embeds[0].description.match("Giveaway ended")) {
-                    message.channel.send("Please specify the message ID of a valid giveaway message. The ID you specified is not the message ID of a giveaway.")
+                catch (err) {
+                    slash.editReply("I was unable to fetch the giveaway message. Please ensure that you specified the correct message ID, and that you are currently using this command in the same channel as the giveaway.");
                     return;
                 }
 
-                var desc = m.embeds[0].description;
-                var prevWinners = desc.match(/(?<=<@)([0-9]{18})(?=>)/gm);
-                if (!prevWinners) prevWinners = [];
+                if (m.author.id != m.client.user.id || !m.embeds || !m.embeds[0] || !m.embeds[0].description.match("Giveaway ended"))
+                    return slash.editReply("Please specify the message ID of a valid giveaway message. The ID you specified is not the message ID of a giveaway.");
 
-                if (numWinners.toLowerCase() == "all") numWinners = m.embeds[0].footer.text.split(" • ")[1].split(" ")[0];
+                let desc = m.embeds[0].description;
+                let prevWinners = desc.match(/(?<=<@)([0-9]{18})(?=>)/gm) ?? [];
+                numWinners = numWinners ?? m.embeds[0].footer.text.split(" • ")[1].split(" ")[0];
 
-                redrawWinners(message.client, {
-                    channelID: message.channel.id,
+                let system = new Giveaway(slash.client, "giveaway");
+                await system.redraw({
+                    channelID: m.channel.id,
                     messageID: id,
                     desc: m.embeds[0].title
                 }, numWinners, prevWinners);
 
-                message.delete({timeout: 3000});
+                slash.editReply(`Redrew winners for the giveaway!\n${m.channel.id != slash.channel.id ? "View the new winners [here](" + m.url + ")." : "*Deleting message in (3) seconds...*"}`);
+                if (m.channel.id == slash.channel.id) slash.deleteReply(3);
 
-            })
-            .catch(err => {
-
-                message.channel.send("I was unable to fetch the giveaway message. Please ensure that you specified the correct message ID, and that you are currently using this command in the same channel as the giveaway.");
-
-            });
+            }
 
         })
+        .build()
     ],
-    drawWinners,
-    redrawWinners,
-    giveawayScheduler,
-    convertToTime
-};
+    Giveaway
+}

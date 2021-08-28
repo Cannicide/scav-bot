@@ -1,9 +1,8 @@
 //Command to create polls and votes.
 
-var Command = require("../command");
-var Interface = require("../interface");
-const Interpreter = require("../interpreter");
-var Reactions = require("../evg").remodel("reactions");
+const { SlashCommand, interpreter } = require("elisif");
+const { SubCommandBuilder } = SlashCommand;
+const evg = require("../evg").remodel("reactions");
 
 const emotes = {
     mc: ["🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯"],
@@ -32,90 +31,52 @@ const polls = {
         //Save poll data to reactions.json
         var cacheEmotes = [];
 
-        var item = {
-            name: "",
-            id: "",
-            type: "poll",
-            votes: {},
-            voters: {},
-            voteLimit: maxChoices || 1,
-            question: question,
-            choices: choices,
-            messageID: message.id,
-            channelID: message.channel.id,
-            starter: user.id
-        };
-
         if (type == "mc") {
-            item.name = emotes.mc;
-            cacheEmotes = item.name;
+            cacheEmotes = emotes.mc;
 
-            if (choices.length > 10) {message.channel.send("Multiple-choice polls can only have a maximum of ten choices."); return false};
+            if (choices.length > 10) {
+                message.channel.send("Multiple-choice polls can only have a maximum of ten choices.");
+                return false
+            }
         }
         else if (type == "yn") {
-            item.id = emotes.yn;
-            cacheEmotes = item.id;
+            cacheEmotes = emotes.yn;
 
-            if (choices.length > 2) {message.channel.send("Yea/nay polls can only have a maximum of two choices."); return false};
+            if (choices.length > 2) {
+                message.channel.send("Yea/nay polls can only have a maximum of two choices.");
+                return false
+            }
         }
 
         var choicesAdded = 0;
-        emotes[type].forEach(choice => {
-            if (choicesAdded < choices.length) {
-                item.votes[choice] = 0;
-                choicesAdded++;
-            }
+
+        interpreter.reactions.get("poll").add(message, user, cacheEmotes, {
+            votes: emotes[type].reduce((col, choice) => {
+                if (choicesAdded++ >= choices.length) return col;
+                col[choice] = 0;
+                return col;
+            }, {}),
+            voters: {},
+            voteLimit: maxChoices ?? 1,
+            question,
+            choices,
         });
 
-        Interpreter.addReaction(cacheEmotes, item);
-
         return true;
-
     },
     remove: (sorted_index) => {
         //Remove poll data from reactions.json
 
-        //Get index of poll data
-        var index = polls.findIndex(sorted_index);
-
-        //Remove poll data
-        Reactions.splice(index, 1);
-
-        //Remove poll-end data
-        Reactions.splice(index - 1, 1);
+        interpreter.reactions.get("poll").remove(sorted_index);
+        interpreter.reactions.get("poll-end").remove(sorted_index);
     },
-    array: () => {
-        //Get an array of all polls, in order
-
-        var polls_list = Reactions.filter(item => item.type == "poll");
-        return polls_list;
-    },
-    fetch: (sorted_index) => {
-        //Gets a specific poll based on the poll's index in polls#array()
-
-        var sorted = polls.array();
-        return sorted[sorted_index];
-    },
-    findIndex: (sorted_index) => {
-        //Retrieves the index of a specific poll in the cache
-
-        var messageID = polls.fetch(sorted_index).messageID;
-
-        var index = Reactions.values().findIndex(item => item.messageID == messageID && item.type == "poll");
-        return index;
-    },
-    findSortedIndex: (messageID) => {
-        //Retrieve a poll's index in polls#array() based on the message ID
-
-        var sorted = polls.array();
-        return sorted.findIndex(item => item.messageID == messageID);
-    },
+    fetch: interpreter.reactions.get("poll").fetch,
     votes: {
         add: (sorted_index, choice, user, reaction) => {
             //Adds a vote to the specified poll
-            var index = polls.findIndex(sorted_index);
+            var index = interpreter.reactions.get("poll").findIndex(sorted_index);
 
-            var db = Reactions.root();
+            var db = evg.root();
             var cache = db.get("reactions");
             cache[index].votes[choice] += 1;
 
@@ -132,9 +93,9 @@ const polls = {
         },
         remove: (sorted_index, choice, user) => {
             //Removes a vote from the specified poll
-            var index = polls.findIndex(sorted_index);
+            var index = interpreter.reactions.get("poll").findIndex(sorted_index);
 
-            var db = Reactions.root();
+            var db = evg.root();
             var cache = db.get("reactions");
             cache[index].votes[choice] -= 1;
 
@@ -148,16 +109,7 @@ const polls = {
     },
     gui: {
         addTrash: (message, user) => {
-
-            var item = {
-                name: "",
-                id: emotes.gui.trash,
-                type: "poll-end",
-                messageID: message.id,
-                channelID: message.channel.id
-            };
-
-            Interpreter.addReaction(emotes.gui.trash, item);
+            interpreter.reactions.get("poll-end").add(message, user, [emotes.gui.trash]);
         },
         createProgressBar: (percent) => {
             //Creates a 10-emote progress bar out of 4 different types of emotes
@@ -240,172 +192,65 @@ const polls = {
     }
 }
 
-function createPoll(message, args) {
-    //Create a poll message and saves data to reactions.json
+async function createPoll(slash) {
+    //Creates a poll message and saves data to reactions.json
 
-    //Check to make sure there aren't more than 10 maximum polls running at once
-    //Admins can bypass this restriction
-    //THIS RESTRICTION IS NO LONGER NECESSARY, THANKS TO POLL LIST PAGINATION
-    // if (polls.array().length >= 10 && !message.member.hasPermission("ADMINISTRATOR")) return message.channel.send("Apologies, but there can only be a maximum of 10 polls running at once.").then(m => m.delete({timeout: 5000}));
-
-    //Help embed
-    var helpEmbed = new Interface.Embed(message, {
-        fields: [
-
-            {
-                name: "How to Create a Poll",
-                value: "Specify only the poll's question and choices. Max votable choices and poll type can be selected afterwards.\n\nFormat: ```\n/poll <Question> | <Choice 1, Choice 2, etc.>```Ex: ```fix\n/poll What is your favorite fruit? | Apples, Pears, Bananas```"
-            }
-
-        ],
-        title: "Poll Creation"
-    });
+    slash.deferReply({ephemeral: true});
 
     //Get the args of the message (separated by pipe char)
-    args = args ? args.join(" ").split(" | ") : false;
+    var args = slash.varargs;
 
-    if (!args || args == "" || args.length < 2) {
-        //Explain how to create a poll -- specifying all args or just specifying the question/choices
+    // Arg structure
+    // /poll <question> <channel> <maxChoices> <choice1> <choice2> [choice3] ... [choice10]
 
-        return message.channel.send(helpEmbed);
-    }
+    var yeawords = ["yea", "yay", "yes", "yep"];
+    var naywords = ["nay", "nah", "no", "nope"];
 
-    //Check how many args the message has --
-    //If it has 2 (just the question and choices supplied), then create an interface to get rest of info
-    //If it has all necessary args, create the poll
-    //If it has no args, explain how to create a poll
+    //Set each variable to its respective value
+    var type = yeawords.includes(choices[0].toLowerCase()) && naywords.includes(choices[1].toLowerCase()) ? "yn" : "mc";
+    var question = args[0];
+    var channel = args[1];
+    var maxChoices = type == "yn" ? 1 : Number(args[2]);
+    var choices = args.slice(3);
 
-    if (args && args != "" && args.length == 2) {
-        //Create reaction interfaces asking for: poll-type (if only two choices) OR max choices per user (if > 2 choices)
+    //Double check max choices is less than number of choices and at least 1
+    if (maxChoices >= choices.length) maxChoices = choices.length - 1;
+    if (maxChoices < 1) maxChoices = 1;
 
-        //Set each variable to its respective value
-        var type;
-        var question = args[0];
-        var choices = args[1].split(", ");
-        var maxChoices;
+    //Poll creation functionality
+    var previous = false;
+    var formattedChoices = polls.gui.createPollDisplay(choices, type);
 
-        //Poll creation functionality, after all info is supplied
-        function generatePoll() {
-            var previous = false;
+    var embed = slash.interface.genEmbeds({
+        fields: formattedChoices,
+        title: "📊 " + question,
+        footer: [slash.client.user.username, `Select ${maxChoices} choice(s)`]
+    }, slash);
 
-            var formattedChoices = polls.gui.createPollDisplay(choices, type);
+    return channel.send(embed).then(m => {
+        //React with an emote for each choice, depending on the poll-type
+        choices.forEach((_c, index) => {
+            if (previous) previous = previous.then(_r => m.react(emotes[type][index]));
+            else previous = m.react(emotes[type][index]);
+        });
 
-            var embed = new Interface.Embed(message, {
-                fields: formattedChoices,
-                title: "📊 " + question,
-                footer: [message.client.user.username, `Select ${maxChoices} choice(s)`]
-            });
+        //Add trash emote to allow ending poll easily
+        previous.then(() => m.react(emotes.gui.trash))
 
-            message.channel.send(embed).then(m => {
-                //React with an emote for each choice, depending on the poll-type
-                choices.forEach((choice, index) => {
-                    if (previous) previous = previous.then(r => {return m.react(emotes[type][index])});
-                    else previous = m.react(emotes[type][index]);
-                });
+        //Add trash to interpreter
+        polls.gui.addTrash(m, slash.author);
 
-                //Add trash emote to allow ending poll easily
-                previous.then(() => {m.react(emotes.gui.trash)})
+        //Create poll using polls.add()
+        var result = polls.add(m, question, choices, maxChoices, type, slash.author);
 
-                //Add trash to interpreter
-                polls.gui.addTrash(m, message.author);
+        //Send response
+        slash.editReply("Created new poll in channel: " + channel.name);
 
-                //Create poll using polls.add()
-                var result = polls.add(m, question, choices, maxChoices, type, message.author);
-
-                //Auto-delete poll message after a few seconds for aesthetic.
-                message.delete({timeout: 2500})
-
-                //Check if polls.add() returns true; if it doesn't, delete the poll message (m)
-                if (!result) m.delete();
-            });
-        }
-
-        //Check how many choices the poll will have
-        if (choices.length > 10) args = false;
-        else if (choices.length == 2) {
-            //Could be yea/nay OR multiple choice, but the maxChoices will always be 1
-            //So ask for poll-type
-
-            maxChoices = 1;
-            var instances = 0;
-
-            var yeawords = ["yea", "yay", "yes", "yep"];
-            var naywords = ["nay", "nah", "no", "nope"];
-
-            var firstYeaSecondNay = yeawords.includes(choices[0].toLowerCase()) && naywords.includes(choices[1].toLowerCase());
-            var secondYeaFirstNay = naywords.includes(choices[0].toLowerCase()) && yeawords.includes(choices[1].toLowerCase());
-
-            if (firstYeaSecondNay) {
-                //Choices are for sure yea/nay
-                type = "yn";
-                generatePoll();
-            }
-            else if (secondYeaFirstNay) {
-                //Choices are yea/nay but in the wrong order
-                type = "mc";
-                generatePoll();
-            }
-            else {
-                //Ask whether to use yea/nay or multiple choice
-
-                var embedded = new Interface.Embed(message, {
-                    desc: `<:yeanay:${emotes.gui.yn}> Yea/Nay Poll\n${emotes.gui.mc} Multiple Choice Poll`,
-                    title: "Select a Poll Type"
-                });
-
-                new Interface.ReactionInterface(message, embedded, [emotes.gui.yn, emotes.gui.mc], (menu, reaction) => {
-
-                    if (instances >= 1) return;
-                    instances++;
-
-                    if (reaction.emoji.id == emotes.gui.yn) {
-                        //Chose yea/nay
-                        type = "yn";
-                    }
-                    else {
-                        //Chose multiple choice
-                        type = "mc";
-                    }
-
-                    menu.delete();
-                    generatePoll();
-
-                });
-
-            }
-        }
-        else {
-            //Can only be multiple choice (more than 2 choices provided), so maxChoices could possibly be higher than 1
-            //So ask for maxChoices
-
-            type = "mc";
-            var instances = 0;
-            var sliceNumbers = emotes.gui.numbers.slice(0, choices.length);
-
-            var embedded = new Interface.Embed(message, {
-                desc: `From ${emotes.gui.numbers[0]} - ${emotes.gui.numbers[sliceNumbers.length - 1]} choices.`,
-                title: "Select Max Votable Choices Per User"
-            });
-
-            new Interface.ReactionInterface(message, embedded, sliceNumbers, (menu, reaction) => {
-
-                if (instances >= 1) return;
-                instances++;
-
-                maxChoices = emotes.gui.numbers.indexOf(reaction.emoji.name) + 1;
-
-                menu.delete();
-                
-                if (choices.length > 10) {
-                    //Error message
-                    message.channel.send(helpEmbed);
-                }
-                else generatePoll();
-
-            })
-        }
-
-    }
+        //Check if polls.add() returns true; if it doesn't, delete the poll message (m)
+        if (!result) m.delete();
+    }).catch(_err => {
+        slash.editReply("Sorry, an error occurred. Unable to create poll.");
+    });
 
 }
 
@@ -413,7 +258,7 @@ function handleAddVote(reaction, user) {
     //Handle votes by saving vote data to reactions.json and ensuring that max choices per user is not exceeded
 
     //Find sorted index of the current poll
-    var index = polls.findSortedIndex(reaction.message.id);
+    var index = interpreter.reactions.get("poll").findSortedIndex(reaction.message.id);
 
     //Check if reaction's ID is present in emotes.yn[], to determine the poll type
     if (emotes.yn.includes(reaction.emoji.id)) {
@@ -442,7 +287,7 @@ function handleRetractVote(reaction, user) {
     //Handle votes by saving vote data to reactions.json and ensuring that max choices per user is not exceeded
 
     //Find sorted index of the current poll
-    var index = polls.findSortedIndex(reaction.message.id);
+    var index = interpreter.reactions.get("poll").findSortedIndex(reaction.message.id);
 
     //Check if reaction's ID is present in emotes.yn[], to determine the poll type
     if (emotes.yn.includes(reaction.emoji.id)) {
@@ -467,13 +312,13 @@ function handleRetractVote(reaction, user) {
 
 }
 
-function pollProgress(message, args) {
+function pollProgress(slash) {
     //Show the current and/or final results of a poll by its sorted_index
 
     //Get sorted_index from args
-    var index = args && args.length == 1 ? args[0] : false;
+    var index = slash.varargs.length == 1 ? slash.varargs[0] : false;
 
-    if (index && !isNaN(index) && Number(index) < polls.array().length && Number(index) >= 0) {
+    if (index != false && !isNaN(index) && Number(index) < interpreter.reactions.get("poll").array().length && Number(index) >= 0) {
         //An index was properly specified
 
         var poll = polls.fetch(index);
@@ -482,43 +327,44 @@ function pollProgress(message, args) {
         var type = emotes.yn[0] == poll.id[0] ? "yn" : "mc";
         var response = [];
 
-            var choice = "No votes are in";
-            var maxVotes = 0;
+        var choice = "No votes are in";
+        var maxVotes = 0;
 
-            Object.keys(votes).forEach((key, index) => {
-                if (votes[key] > maxVotes) {
-                    choice = `${emotes.full[type][index]} (**${poll.choices[index]}**)`;
-                    maxVotes = votes[key];
-                }
-                else if (votes[key] == maxVotes) {
-                    choice += ", " + `${emotes.full[type][index]} (**${poll.choices[index]}**)`;
-                }
-            });
+        Object.keys(votes).forEach((key, index) => {
+            if (votes[key] > maxVotes) {
+                choice = `${emotes.full[type][index]} (**${poll.choices[index]}**)`;
+                maxVotes = votes[key];
+            }
+            else if (votes[key] == maxVotes) {
+                choice += ", " + `${emotes.full[type][index]} (**${poll.choices[index]}**)`;
+            }
+        });
 
         response = polls.gui.createPollDisplay(poll.choices, votes);
         response.unshift({name: "Leading", value: choice});
 
-        var embed = new Interface.Embed(message, {
+        var embed = slash.client.util.genEmbeds({
             fields: response,
             title: poll.question
-        });
+        }, slash);
 
-        message.channel.send(embed);
+        slash.reply(embed);
 
     }
     else {
         //An index was not properly specified
 
-        message.delete({timeout: 5000});
-        message.channel.send("Invalid poll index. Please specify a poll using the number index listed to the left of each poll in `/polls list`.").then(m => m.delete({timeout: 10000}));
+        slash.reply({content: "Invalid poll index. Please specify a poll using the number index listed to the left of each poll in `/polls list`.", ephemeral: true});
     }
 
 }
 
-async function listPolls(message) {
+async function listPolls(slash) {
     //List all of the current polls (by their sorted_index) - no need for guild checks since only one guild is being used
 
-    var list = polls.array();
+    slash.deferReply();
+
+    var list = interpreter.reactions.get("poll").array();
     var desc = false;
     var fields = [];
     var index = 0;
@@ -526,7 +372,7 @@ async function listPolls(message) {
     for (var poll of list) {
         fields.push({
             name: `**[${index++}]** ${poll.question}\n`,
-            value: `[Go to Message](https://discordapp.com/channels/${message.guild.id}/${poll.channelID}/${poll.messageID})\nStarted by: **${(await message.guild.members.fetch(poll.starter)).user.tag}**`
+            value: `[Go to Message](https://discordapp.com/channels/${slash.guild.id}/${poll.channelID}/${poll.messageID})\nStarted by: **${(await slash.guild.members.fetch(poll.starter)).user.tag}**`
         });
     }
 
@@ -538,7 +384,15 @@ async function listPolls(message) {
         fields: fields.slice(0, 2)
     };
 
-    message.channel.paginate(embed, fields, 3);
+    slash.editReply("Compiled list of polls...");
+    slash.deleteReply(1);
+
+    slash.client.util.buttonPaginator({
+        message: slash,
+        embed,
+        elements: fields,
+        perPage: 3
+    });
 
 }
 
@@ -552,10 +406,10 @@ function endPollByReaction(reaction, user) {
     });
 
     //Get the sorted_index of the poll
-    var index = polls.findSortedIndex(reaction.message.id);
+    var index = interpreter.reactions.get("poll").findSortedIndex(reaction.message.id);
 
     //Check if the reaction user is the starter of the poll, and if they are admin
-    if ((!polls.fetch(index) || polls.fetch(index).starter != user.id) && !reaction.message.guild.member(user.id).hasPermission("ADMINISTRATOR")) return;
+    if ((!polls.fetch(index) || polls.fetch(index).starter != user.id) && !user.client.util.Member(reaction.message.guild.member(user.id)).hasPerms("ADMINISTRATOR")) return;
 
     var opts = polls.fetch(index).votes;
     var choice = "";
@@ -587,21 +441,23 @@ function endPollByReaction(reaction, user) {
 
 }
 
-function endPoll(message, args) {
+function endPoll(slash) {
     //Ends a specified poll using its sorted_index
 
+    slash.deferReply({ephemeral: true});
+    
     //Get sorted_index from args
-    var index = args && args.length == 1 ? args[0] : false;
+    var index = slash.varargs.length == 1 ? slash.varargs[0] : false;
 
-    if (index && !isNaN(index) && Number(index) < polls.array().length && Number(index) >= 0) {
+    if (index != false && !isNaN(index) && Number(index) < interpreter.reactions.get("poll").array().length && Number(index) >= 0) {
         //An index was properly specified
 
-        if (polls.fetch(index).starter != message.author.id && !message.member.hasPermission("ADMINISTRATOR")) return message.channel.send(`Sorry <!@${message.author.id}>, you do not have permission to end that poll.`).then(m => m.delete({timeout: 5000}));
+        if (polls.fetch(index).starter != slash.author.id && !slash.client.util.Member(slash.member).hasPerms("ADMINISTRATOR")) return slash.editReply(`Sorry <!@${slash.author.id}>, you do not have permission to end that poll.`);
 
         var id = polls.fetch(index).messageID;
         var channelID = polls.fetch(index).channelID;
 
-        message.guild.channels.cache.get(channelID).messages.fetch(id).then(m => {
+        slash.guild.channels.cache.get(channelID).messages.fetch(id).then(m => {
 
             var opts = polls.fetch(index).votes;
             var choice = "";
@@ -632,125 +488,133 @@ function endPoll(message, args) {
             polls.remove(index);
         });
 
-        message.channel.send("Removed the poll.").then(m => {
-            m.delete({timeout: 5000});
-            message.delete({timeout: 5000});
-        });
+        slash.editReply("Removed the poll.");
 
     }
     else {
         //An index was not properly specified
 
-        message.delete({timeout: 5000});
-        message.channel.send("Invalid poll index. Please specify a poll using the number index listed to the left of each poll in `/polls list`.").then(m => m.delete({timeout: 10000}));
+        slash.editReply("Invalid poll index. Please specify a poll using the number index listed to the left of each poll in `/polls list`.").then(m => m.delete({timeout: 10000}));
     }
 
 }
 
 module.exports = {
     commands: [
-        new Command("pollcreate", {
-            roles: ["Staff", "Surveyer"],
-            desc: "A command to create yea/nay and/or multiple-choice polls (max 10 votable options).",
+        new SlashCommand({
+            name: "poll",
+            // roles: ["Staff", "Surveyor"], // NO MORE ROLE RESTRICTIONS FOR POLLS!
+            desc: "Build, view, list, and end polls!",
+            guilds: JSON.parse(process.env.SLASH_GUILDS),
             args: [
-                {
-                    name: "poll arguments",
-                    optional: true
-                }
+                new SubCommandBuilder() //create <question> <channel> <maxChoices> <choice1> <choice2> [choice3] ... [choice10]
+                .setName("create")
+                .setDescription("Creates a new poll!")
+                .addStringArg(arg => 
+                    arg.setName("question")
+                    .setDescription("The question to ask in the poll.")    
+                )
+                .addChannelArg(arg => 
+                   arg.setName("channel")
+                   .setDescription("The channel to post the poll in.") 
+                )
+                .addIntegerArg(arg => 
+                    arg.setName("maxChoices")
+                    .setDescription("The maximum number of choices users can select.")    
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice1")
+                    .setDescription("The first choice.")
+                    .setOptional(false)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice2")
+                    .setDescription("The second choice.")
+                    .setOptional(false)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice3")
+                    .setDescription("The third choice.")
+                    .setOptional(true)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice4")
+                    .setDescription("The fourth choice.")
+                    .setOptional(true)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice5")
+                    .setDescription("The fifth choice.")
+                    .setOptional(true)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice6")
+                    .setDescription("The sixth choice.")
+                    .setOptional(true)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice7")
+                    .setDescription("The seventh choice.")
+                    .setOptional(true)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice8")
+                    .setDescription("The eighth choice.")
+                    .setOptional(true)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice9")
+                    .setDescription("The ninth choice.")
+                    .setOptional(true)
+                )
+                .addStringArg(arg =>
+                    arg.setName("choice10")
+                    .setDescription("The tenth choice.")
+                    .setOptional(true)
+                ),
+
+                new SubCommandBuilder() //list
+                .setName("list")
+                .setDescription("Lists all running polls."),
+
+                new SubCommandBuilder() //progress <index>
+                .setName("progress")
+                .setDescription("Shows the progress of a running poll.")
+                .addIntegerArg(arg =>
+                    arg.setName("index")
+                    .setDescription("The index of the poll to show progress of.")
+                    .setOptional(false)
+                ),
+
+                new SubCommandBuilder() //end <index>
+                .setName("end")
+                .setDescription("Ends a running poll.")
+                .addIntegerArg(arg =>
+                    arg.setName("index")
+                    .setDescription("The index of the poll to end.")
+                    .setOptional(false)
+                )
             ],
-            aliases: ["poll", "createpoll", "createpolls", "pollscreate"],
-            cooldown: 2
-        }, (message) => {
+            async execute(slash) {
 
-            //Use Interface.Interface() here to get the following details for each poll:
-            // [poll-type, question, choices, max choices per user]
-
-            // or
-
-            //Use one-line syntax to get following details:
-            // poll-type | question | choices | max choices per user
-            
-            //This poll system will require a ReactionCollector and reaction interpreter mechanism
-
-            var args = message.args;
-            createPoll(message, args);
-
-        }),
-        new Command("polllist", {
-            roles: ["Staff", "Surveyer"],
-            desc: "A command to list all existing polls.",
-            aliases: ["polls", "pollslist", "listpoll", "listpolls"],
-            cooldown: 2
-        }, (message) => {
-
-            //Use Interface.Interface() here to get the following details for each poll:
-            // [poll-type, question, choices, max choices per user]
-
-            // or
-
-            //Use one-line syntax to get following details:
-            // poll-type | question | choices | max choices per user
-            
-            //This poll system will require a ReactionCollector and reaction interpreter mechanism
-
-            listPolls(message);
-
-        }),
-        new Command("pollprogress", {
-            roles: ["Staff", "Surveyer"],
-            desc: "A command to view the progress of any existing poll.",
-            args: [
-                {
-                    name: "poll index",
-                    optional: true
+                if (slash.subcommand == "create") {
+                    //Creates a new poll
+                    await createPoll(slash);
                 }
-            ],
-            aliases: ["pollsresult", "pollresult", "pollsresults", "pollresults", "pollsprogress"],
-            cooldown: 2
-        }, (message) => {
-
-            //Use Interface.Interface() here to get the following details for each poll:
-            // [poll-type, question, choices, max choices per user]
-
-            // or
-
-            //Use one-line syntax to get following details:
-            // poll-type | question | choices | max choices per user
-            
-            //This poll system will require a ReactionCollector and reaction interpreter mechanism
-
-
-            var args = message.args;
-            pollProgress(message, args);
-
-        }),
-        new Command("pollend", {
-            roles: ["Staff", "Surveyer"],
-            desc: "A command to end any existing poll that you either created yourself or have perms to end.",
-            args: [
-                {
-                    name: "poll index",
-                    optional: true
+                else if (slash.subcommand == "list") {
+                    //Lists all running polls
+                    await listPolls(slash);
                 }
-            ],
-            aliases: ["pollsend", "endpoll", "endpolls"],
-            cooldown: 2
-        }, (message) => {
+                else if (slash.subcommand == "progress") {
+                    //Shows the progress of a poll
+                    await pollProgress(slash);
+                }
+                else if (slash.subcommand == "end") {
+                    //Ends a poll
+                    await endPoll(slash);
+                }
 
-            //Use Interface.Interface() here to get the following details for each poll:
-            // [poll-type, question, choices, max choices per user]
-
-            // or
-
-            //Use one-line syntax to get following details:
-            // poll-type | question | choices | max choices per user
-            
-            //This poll system will require a ReactionCollector and reaction interpreter mechanism
-
-
-            var args = message.args;
-            endPoll(message, args);
-
+            }
         })
     ],
     polls: {
@@ -767,23 +631,26 @@ module.exports = {
     initialize: function() {
 
         //Setup poll vote adding
-        Interpreter.register({
-            type: "reaction",
-            filter: (inCache, isAdding) => inCache.type == "poll" && isAdding,
+        interpreter.reactions.register({
+            category: "poll",
+            adding: true,
+            filter: (inCache, r, u) => inCache && r && u,
             response: (r, u) => this.votes.add(r, u)
-        });
+        })
 
         //Setup poll vote retracting
-        Interpreter.register({
-            type: "reaction",
-            filter: (inCache, isAdding) => inCache.type == "poll" && !isAdding,
+        interpreter.reactions.register({
+            category: "poll",
+            adding: false,
+            filter: (inCache, r, u) => inCache && r && u,
             response: (r, u) => this.votes.retract(r, u)
         });
 
         //Setup poll ending
-        Interpreter.register({
-            type: "reaction",
-            filter: (inCache, isAdding) => inCache.type == "poll-end" && isAdding,
+        interpreter.reactions.register({
+            category: "poll-end",
+            adding: true,
+            filter: (inCache, r, u) => inCache && r && u,
             response: (r, u) => this.polls.endByReaction(r, u)
         });
 

@@ -1,36 +1,46 @@
 //For manually adding reaction votes if someone sends a suggestion while the bot is down
 
-var Command = require("../command");
+const { SlashCommand } = require("elisif");
+const { ArgumentBuilder } = SlashCommand;
 
-module.exports = new Command("reactfix", {
+module.exports = new SlashCommand({
+    name: "reactfix",
     roles: ["System Administrator", "Admin", "Developer", "Mod"],
+    guilds: JSON.parse(process.env.SLASH_GUILDS),
     desc: "Manually add a reaction vote to a suggestion message if that suggestion was sent while the bot was down.",
     args: [
-        {
-            name: "channel-name",
-            feedback: "Please specify the name of the channel to fix the reaction in."
-        },
-        
-        {
-            name: "message-ID",
-            feedback: "Please specify the ID of the message to fix the reaction on."
-        }
-    ]
-}, (message) => {
+        new ArgumentBuilder()
+        .setName("message")
+        .setType("string")
+        .setDescription("The ID of the message to fix the reaction on.")
+        .setOptional(false),
 
-    try {
-        message.guild.channels.cache.find(c => c.name == message.args[0]).messages.fetch(message.args[1]).then(msg => {
+        new ArgumentBuilder()
+        .setType("channel")
+        .setName("channel")
+        .setDescription("The name of the channel to fix the reaction in.")
+        .setOptional(true)
+    ],
+    execute(slash) {
 
-            msg.react("713053971757006950")
-            .then(() => {
-                msg.react("713053971211878452");
-                message.channel.send("Successfully added a reaction vote to message:" + message.args[1]);
+        const { message, channel } = slash.mappedArgs.toObject();
+        channel = channel ?? slash.channel;
+
+        slash.deferReply({ ephemeral: true });
+
+        try {
+            channel.messages.fetch(message).then(msg => {
+
+                msg.react("713053971757006950")
+                .then(() => {
+                    msg.react("713053971211878452");
+                    slash.editReply("Successfully added a reaction vote to message with ID: " + message);
+                });
+                
             });
-            
-        });
+        }
+        catch (err) {
+            slash.editReply("Failed to add a reaction vote; the specified message ID may be invalid, or I may not have permission to use reactions in the specified channel.");
+        }
     }
-    catch (err) {
-        message.reply("failed to add a reaction vote; either the specified channel-name or message-ID is invalid.");
-    }
-
 });

@@ -1,41 +1,35 @@
 //Translates text from a detected language to a provided language
 //Using Google Translate
 
-const Command = require("../command");
-const fetch = require("node-fetch");
+const { SlashCommand, fetch } = require("elisif");
+const { ArgumentBuilder } = SlashCommand;
 const cheerio = require("cheerio");
 
-module.exports = new Command("translate", {
-  desc: "Easily translate text to a specified language, powered by Google Translate.",
-  cooldown: 5,
+module.exports = new SlashCommand({
+  name: "translate",
+  desc: "Easily translate text to a specified language using Google Translate!",
   args: [
-    {
-      name: "text",
-      feedback: "Please specify some text to translate."
-    },
-    {
-      name: "to",
-      static: true,
-      optional: true
-    },
-    {
-      name: "language",
-      optional: true
-    }
+
+    new ArgumentBuilder()
+    .setName("text")
+    .setDescription("The text to translate.")
+    .setType("string"),
+
+    new ArgumentBuilder()
+    .setName("language")
+    .setDescription("The language to translate to. Defaults to English.")
+    .setType("string")
+    .setOptional(true)
+
   ]
-}, (message) => {
+}, (slash) => {
 
-  var plusArgs = "translate+" + message.args.join("+");
-  var spaceArgs = message.args.join(" ");
+  const { text, language } = slash.mappedArgs.toObject();
+  language = language ?? "English";
 
-  if (message.args.length < 3 || message.args[message.args.length - 2].toLowerCase() != "to") {
-    plusArgs += "+to+English";
-  }
-  else {
-    spaceArgs = spaceArgs.split("").reverse().join("").replace(/ot/i, "%replacer%").split("%replacer%")[1].split("").reverse().join("");
-  }
+  slash.deferReply();
 
-  fetch(`https://www.google.com/search?q=${plusArgs}`)
+  fetch(`https://www.google.com/search?q=translate+${text.replace(/ /g, "+")}+to+${language.replace(/ /g, "+")}`)
   .then(res => res.text())
   .then(body => {
     var $ = cheerio.load(body);
@@ -43,12 +37,12 @@ module.exports = new Command("translate", {
     var translation = $(".MUxGbd.u31kKd.gsrt.lyLwlc").text();
     var lang = $('select[aria-label="Select target language"] > option[selected]').attr("value");
 
-    message.channel.embed({
-      desc: `Original: ${spaceArgs}\n\nTranslation (${lang ? lang : "Unknown"}): ${translation == "" ? "Unable to translate." : translation}`
-    });
+    slash.editReply(slash.client.util.genEmbeds({
+      desc: `Original: ${text}\n\nTranslation (${lang ? lang : "Unknown"}): ${translation == "" ? "Unable to translate." : translation}`
+    }));
   })
-  .catch(err => {
-    message.channel.send("Failed to translate the text; please notify Cannicide#2753.");
+  .catch(_err => {
+    slash.editReply("Failed to translate the text; please notify Cannicide#2753.");
   });
 
 });

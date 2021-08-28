@@ -1,8 +1,7 @@
-const util = require("minecraft-server-util");
-const ping = util.status;
-var Command = require("../command");
+const ping = require("minecraft-server-util");
+const { SlashCommand } = require("elisif");
 
-function getServerInfo(callback, err) {
+function getServerInfo(client, callback, err) {
 
     var info = {
         players: 0,
@@ -10,69 +9,150 @@ function getServerInfo(callback, err) {
         version: "",
     }
 
-    ping(process.env.SERVER_IP)
-        .then((response) => {
-            info.players = response.onlinePlayers;
-            info.icon = response.favicon;
-            info.version = response.version;
-            return callback(info);
-        })
-        .catch((error) => {
-            console.log(error);
-            if (err) err();
-        });
+    ping.status(client.setting("stats_mc_ip"))
+    .then(response => {
+        info.players = response.onlinePlayers;
+        info.icon = response.favicon;
+        info.version = response.version;
+
+        let wasOnline = client.setting("mcstatus");
+        client.setting("mcstatus", true);
+        return callback(info, wasOnline);
+    })
+    .catch(error => {
+        let wasOnline = client.setting("mcstatus");
+        client.setting("mcstatus", false);
+        if (err) err(error, wasOnline);
+    });
 }
 
-var stats = new Command("statistics", {
-    desc: "View discord and minecraft server statistics.",
-    cooldown: 30,
-    aliases: ["stats"]
-}, (message) => {
+const stats = new SlashCommand({
+    name: "stats",
+    desc: "View discord and minecraft server statistics!",
+    guilds: JSON.parse(process.env.SLASH_GUILDS),
+    execute(slash) {
 
-    getServerInfo((info) => {
+        slash.deferReply();
 
-        var memOnline = message.guild.members.cache.filter(m => m.presence.status != 'offline').size;
-        var memTotal = message.guild.memberCount;
-        var memPercent = memOnline / memTotal * 100;
+        getServerInfo(client, info => {
 
-        message.channel.embed({
-            title: "**Statistics**",
-            thumbnail: message.guild.iconURL({dynamic: true}),
-            fields: [
-                {
-                    name: "Minecraft Server",
-                    value: `Players Online: ${info.players}\nVersion: 1.8.x-1.12.x`
-                },
-                {
-                    name: "Discord Server",
-                    value: `Total Member Count: ${memTotal} users\nTotal Online Members: ${memOnline}\nPercent of Members Online: ${Math.round(memPercent)}%`
-                }
-            ]
+            var memOnline = slash.guild.members.cache.filter(m => m.presence.status != 'offline').size;
+            var memTotal = slash.guild.memberCount;
+            var memPercent = memOnline / memTotal * 100;
+            var mcPercent = info.players / memTotal * 100;
+
+            slash.editReply(slash.client.util.genEmbeds({
+                title: "**Statistics**",
+                thumbnail: slash.guild.iconURL({dynamic: true}),
+                fields: [
+                    {
+                        name: "Minecraft Server",
+                        value: `Players Online: ${info.players}\nPercent of Members Online: ${Math.round(mcPercent)}\nVersion: 1.8.x-1.12.x`
+                    },
+                    {
+                        name: "Discord Server",
+                        value: `Total Member Count: ${memTotal} users\nTotal Online Members: ${memOnline}\nPercent of Members Online: ${Math.round(memPercent)}%`
+                    }
+                ]
+            }));
+
+        }, () => {
+
+            slash.editReply(slash.client.util.genEmbeds({
+                desc: "The server appears to be down.",
+                title: "**Statistics**",
+                thumbnail: slash.guild.iconURL({dynamic: true})
+            }));
+
         });
 
-    }, (err) => {
-
-        message.channel.embed({
-            desc: "The server appears to be down.",
-            title: "**Statistics**",
-            thumbnail: message.guild.iconURL({dynamic: true})
-        });
-
-    });
-
-        
-
+    }
 });
 
 //Scheduler automatically updates parts of the discord with minecraft/guild info and stats
-function scheduler(client) {
+function scheduler(client, useRcon) {
+    if (useRcon) return rconScheduler(client);
+    else return cloneScheduler(client);
+}
 
-    const ip = process.env.SERVER_IP;
+var previousName = "";
+function createScheduledChannels(playersOnline, client, wasOnline) {
+
+    const guild = client.guilds.cache.find(g => g.id == client.setting("stats_guild")); //"351824506773569541"
+    const category = guild ? guild.channels.cache.get(client.setting("stats_category")) : false; //"728978616905367602"
+    var msg = false;
+
+    const channelPerms = [
+        {
+            //@everyone
+            id: "351824506773569541",
+            deny: ["CONNECT", "SPEAK"],
+            allow: ["VIEW_CHANNEL"]
+        },
+        {
+            //@System Administrator
+            id: "627599099184807966",
+            allow: ["CONNECT", "SPEAK"]
+        }
+    ];
+
+    if (guild && (playersOnline || playersOnline == 0)) msg = `Players: ${playersOnline}/${guild.memberCount}`;
+    else if (guild && playersOnline == false) msg = `Players: Server Offline :(`;
+
+    if (msg && msg != previousName) {
+
+        //Remove all channels in category
+        category.children.each(channel => channel.delete("[Statistics]"));
+
+        previousName = msg;
+
+        //Create new channel for "IP: server IP"
+        //Bypasses channel renaming limits and avoids random Discord API channel dupe glitches
+        guild.channels.create("IP: " + client.setting("stats_mc_ip"), {
+            parent: category,
+            permissionOverwrites: channelPerms,
+            type: "voice",
+            reason: "[Statistics]"
+        })
+        .then(_c => {
+            //Then create new channel for # players online
+            guild.channels.create(msg, {
+                parent: category,
+                permissionOverwrites: channelPerms,
+                type: "voice",
+                reason: "[Statistics]"
+            })
+        });
+
+        if (playersOnline === false && wasOnline) {
+            client.scav.log(guild, `${client.setting("stats_pingroles")}, the server has gone **offline**!`);
+        }
+        else if (playersOnline != false && !wasOnline) {
+            client.scav.log(guild, `${client.setting("stats_pingroles")}, the server is back **online**!`);
+        }
+
+    }
+}
+
+function cloneScheduler(client) {
+    setInterval(() => {
+
+        getServerInfo(client, async (info, wasOnline) => {
+            createScheduledChannels(info.players, client, wasOnline);
+        }, (_err, wasOnline) => {
+            createScheduledChannels(false, client, wasOnline);
+        });
+
+    }, 1 * 60 * 1000);
+}
+
+function rconScheduler(client) {
+
+    const ip = client.setting("stats_mc_ip");
     const port = Number(process.env.RCON_PORT);
     const password = process.env.RCON_PASSWORD;
 
-    const rcon = new util.RCON(ip, { port: port, enableSRV: true, timeout: 5000, password: password });
-    const guild = client.guilds.cache.get("717160493088768020");
+    const rcon = new ping.RCON(ip, { port, enableSRV: true, timeout: 5000, password });
 
     rcon.on('output', async (message) => {
         //Remove color codes
@@ -80,22 +160,12 @@ function scheduler(client) {
         var online = message.split(" out of")[0].replace("There are ", "");
         var vanished = 0;
 
-        var msg = false;
-        const category = guild ? guild.channels.cache.get("753387453108453457") : false;
-
         if (online.match("/")) {
             vanished = online.split("/")[1];
             online = online.split("/")[0];
         }
 
-        const oldChannel = category.children.first();
-
-        if (guild && oldChannel && online) msg = `${online} ${Number(online) == 1 ? "person is" : "people are"} on Scav.tv!`;
-        if (oldChannel && msg && oldChannel.name != msg) {
-            const channel = await oldChannel.clone({name: msg}); 
-            oldChannel.delete();
-        }
-        
+        createScheduledChannels(online ?? 0, client, true);
     });
 
     rcon.connect()
@@ -114,10 +184,9 @@ function scheduler(client) {
         }, 15 * 1000);
     })
     .catch(console.log);
-
 }
 
 module.exports = {
-    command: stats,
-    scheduler: scheduler
+    commands: [stats],
+    scheduler
 }

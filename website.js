@@ -1,6 +1,5 @@
-var DiscordSRZ = require("./discordsrz");
-var srz = require("./evg").resolve("srz");
-// const fetch = require("node-fetch");
+// var DiscordSRZ = require("./discordsrz");
+// var srz = require("./evg").resolve("srz");
 
 function isImage(url) {
   var splitter = url.split(".");
@@ -49,110 +48,35 @@ function setup(app, disc) {
     if (!msg) return res.send("Nope; message not found.");
     
     res.send(msg.content);
-  })
-
-  app.get("/userstats/json", (req, res) => {
-    res.send(srz.values());
   });
 
-  app.get("/userstats/", (req, res) => {
-    res.sendFile(__dirname + "/views/userstats.html");
-  });
-  
-  /*app.get(process.env.EVIDENCE_URL, (req, res) => {
-    res.sendFile(__dirname + "/views/evidence.html");
-  });*/
-  
   app.get(process.env.SPP_URL, (req, res) => {
     res.sendFile(__dirname + "/views/punishments.html");
   });
-  
-  /*app.get(process.env.EVIDENCE_URL + "/googledrive", async (req, res) => {
-    
-    fetch("https://www.googleapis.com/drive/v3/files?q=%27" + process.env.EVIDENCE_GD + "%27+in+parents&key=" + process.env.GD_KEY)
-    .then(res => res.json())
-    .then(body => {
-      res.send(body);
-    })
-    .catch(err => res.status(503).send(err));
-    
-  });
-  
-  app.get(process.env.EVIDENCE_URL + "/googledrive/fetchurl", (req, res) => {
-    
-    res.send(`https://drive.google.com/drive/folders/${process.env.EVIDENCE_GD}?usp=sharing`);
-    
-  });*/
 
-  //Evidence temporarily disabled due to removal of file uploading
+  // app.get("/userstats/json", (req, res) => {
+  //   res.send(srz.values());
+  // });
+
+  // app.get("/userstats/", (req, res) => {
+  //   res.sendFile(__dirname + "/views/userstats.html");
+  // });
   
-  app.get(process.env.EVIDENCE_URL + "/postevidence/:channelID/:name/:url", async (req, res) => {
-    
-    if (!req.params.url || !req.params.name) return res.status(500).send("No URL/name was specified.");
-    
-    var isdirect = decodeURIComponent(req.params.url).match("\\|\\|");
-    
-    var url = decodeURIComponent(req.params.url).replace("||", ".");
-    var name = decodeURIComponent(req.params.name);
-    var channel = disc.channels.cache.get(req.params.channelID);
-    
-    if (!channel) return res.status(500).send("Channel was not found");
-    
-    channel.send({
-      embed: {
-        "color": 16750336,
-        "description": `**Rule Violation Evidence**\n\nA file from the [ScavengerCraft Evidence Panel](https://scav-bot.glitch.me${process.env.EVIDENCE_URL}) was beamed down to this channel.`,
-        "image": isdirect && isImage(url) ? {url:url} : {},
-        "fields": [{"name":"File Link",value:`[🔗](${url})`}],
-        "footer": {
-          "icon_url": channel.guild.iconURL({dynamic:true}),
-          "text": `${name} • ${isdirect ? "Direct Upload" : "Google Drive Upload"}`
-        }
-      }
-    });
-    
-    res.send("Successfully beamed down: " + url);
-    
-  });
+  // DiscordSRZ/ScavengerLink [ TO BE REPLACED WITH KATALINA ]
   
-  app.use(bodyParser.json());
-  
-  // Staff Apps Listener
-  
-  app.post(process.env.APPS_WEBHOOK, (req, res) => {
-    
-    var body = JSON.parse(req.body.body);
-    var url = req.body.url;
-    
-    var channel = disc.channels.cache.find(c => c.name.match("staff-recruitment"));
-    if (!channel) return res.status(500).send("Channel was not found");
-    
-    channel.send({
-      embed: {
-        "color": 16750336,
-        "title": `**New Staff Application**`,
-        "description": `**User:** ${body[0]}\n**Discord:** ${body[1]}\n**Age:** ${body[2]}\n**Timezone:** ${body[3]}\n\n[🔗 View](${url})`,
-        "thumbnail": {"url":`https://cannicideapi.glitch.me/mc/head/${body[0]}`},
-        "footer": {
-          "icon_url": channel.guild.iconURL({dynamic:true}),
-          "text": `Scavenger • Staff App Alert`
-        }
-      }
-    });
-    
-    res.send("Successfully beamed down: " + url);
-    
-  });
-  
-  // DiscordSRZ/ScavengerLink
-  
-  app.post("/discordsrz", (req, res) => {
-    console.log("DiscordSRZ:", req.body);
-    new DiscordSRZ.DiscordSRZ.DataHandler(req.body);
-  });
+  // app.post("/discordsrz", (req, res) => {
+  //   console.log("DiscordSRZ:", req.body);
+  //   new DiscordSRZ.DiscordSRZ.DataHandler(req.body);
+  // });
 
 }
 
 module.exports = {
-    setup: setup
+    setup: setup,
+    get: (path, callback) => {
+      return app.get(path, callback);
+    },
+    post: (path, callback) => {
+      return app.post(path, callback);
+    }
 }
