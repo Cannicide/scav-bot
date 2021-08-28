@@ -1,0 +1,214 @@
+//Get and interact with a Trello board and the cards therein, directly from Discord
+
+var Trello = require('trello-node-api')(process.env.TRELLO_KEY, process.env.TRELLO_TOKEN);
+
+class TrelloBoard {
+
+    //Board ID
+    #id;
+
+    //The TrelloList in which cards are to be created and moved from
+    /**
+     * @type {TrelloList}
+     */
+    #ideaList;
+
+    //The TrelloList in which cards are moved to when in progress
+    /**
+     * @type {TrelloList}
+     */
+    #inProgressList;
+
+    //The TrelloList in which cards are moved to when completed
+    /**
+     * @type {TrelloList}
+     */
+    #completionList;
+
+    constructor(board_id) {
+        this.#id = board_id;
+    }
+
+    constructor(board_id, idea_id, progress_id, completion_id) {
+        this.#id = board_id;
+        this.#ideaList = new TrelloList(idea_id);
+        this.#inProgressList = new TrelloList(progress_id);
+        this.#completionList = new TrelloList(completion_id);
+    }
+
+    setIdeaList(ideaListId) {
+        this.#ideaList = new TrelloList(ideaListId);
+    }
+
+    setProgressList(progressListId) {
+        this.#inProgressList = new TrelloList(progressListId);
+    }
+
+    setCompletionList(completionListId) {
+        this.#completionList = new TrelloList(completionListId);
+    }
+
+    getIdeaList() {
+        return this.#ideaList;
+    }
+
+    getProgressList() {
+        return this.#inProgressList;
+    }
+
+    getCompletionList() {
+        return this.#completionList;
+    }
+
+    get idea() {
+        return getIdeaList();
+    }
+
+    get progress() {
+        return getProgressList();
+    }
+
+    get completion() {
+        return getCompletionList();
+    }
+
+    registerWebhooks(expressApp) {
+
+        var lists = [this.#ideaList, this.#inProgressList, this.#completionList];
+
+        lists.forEach(list => {
+            expressApp.post('/api/trello/v1/' + list.getId(), (req, res) => {
+
+                //Check type of action
+
+                //Perform respective response action
+
+            });
+        });
+
+    }
+
+}
+
+class TrelloList {
+
+    //List ID
+    #id;
+
+    //Webhook callback URL without ID parameter
+    #url = "https://scav-bot.glitch.me/api/trello/v1/";
+
+    constructor(id) {
+
+        this.#id = id;
+
+    }
+
+    get url() {
+        return this.#url + this.#id;
+    }
+
+    getId() {
+        return this.#id;
+    }
+
+    async search(card_name) {
+
+        return await Trello.list.search(this.#id);
+
+    }
+
+    async addCard({
+        name,
+        desc,
+        pos = 'bottom',
+        due = null,
+        dueComplete = false,
+        idMembers = [],
+        idLabels = [],
+        urlSource,
+        fileSource
+    }) {
+
+        var idList = this.#id; //REQUIRED
+
+        var data = {
+            name,
+            desc,
+            pos,
+            idList,
+            due,
+            dueComplete,
+            idMembers,
+            idLabels,
+            urlSource,
+            fileSource
+        }
+
+        var response = await Trello.card.create(data);
+        return response;
+
+    }
+
+    async removeCard(card_name) {
+
+        return await Trello.card.del(await this.search(card_name));
+
+    }
+
+    async editCard(card_name, {
+        name,
+        desc,
+        pos = 'bottom',
+        due = null,
+        dueComplete = false,
+        idMembers = [],
+        idLabels = [],
+        urlSource,
+        fileSource
+    }) {
+
+        var idList = this.#id; //REQUIRED
+
+        var data = {
+            name,
+            desc,
+            pos,
+            idList,
+            due,
+            dueComplete,
+            idMembers,
+            idLabels,
+            urlSource,
+            fileSource
+        }
+
+        return await Trello.card.update(await this.search(card_name), data);
+
+    }
+
+    async addLabels(card_name, labelIDs) {
+
+        return await this.editCard(card_name, {idLabels: labelIDs});
+
+    }
+
+    /**
+     * 
+     * @param {boolean} active 
+     * @returns response
+     */
+    async addListWebhook(active) {
+
+        var data = {
+            description: `Trellocord Webhook ${this.#id}`,
+            callbackURL: this.url, // REQUIRED
+            idModel: this.#id, // REQUIRED
+            active
+        };
+
+        return await Trello.webhook.create(data);
+
+    }
+
+}
