@@ -27,6 +27,7 @@ module.exports = new SlashCommand({
     roles: ["Admin", "System Administrator", "Head Admin", "Owner"],
     desc: "Clears the suggestions channels and automatically posts popular suggestions to our trello.",
     guilds: JSON.parse(process.env.SLASH_GUILDS),
+    args: [],
 
     async execute(slash) {
 

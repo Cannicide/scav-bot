@@ -50,10 +50,6 @@ function setup(app, disc) {
     res.send(msg.content);
   });
 
-  app.get(process.env.SPP_URL, (req, res) => {
-    res.sendFile(__dirname + "/views/punishments.html");
-  });
-
   // app.get("/userstats/json", (req, res) => {
   //   res.send(srz.values());
   // });
@@ -72,11 +68,5 @@ function setup(app, disc) {
 }
 
 module.exports = {
-    setup: setup,
-    get: (path, callback) => {
-      return app.get(path, callback);
-    },
-    post: (path, callback) => {
-      return app.post(path, callback);
-    }
+    setup: setup
 }

@@ -7,6 +7,7 @@ module.exports = new SlashCommand({
     roles: ["Admin", "System Administrator", "Head Admin", "Owner"],
     desc: "Clears all messages in this channel. Use with caution.",
     guilds: JSON.parse(process.env.SLASH_GUILDS),
+    args: [],
 
     async execute(slash) {
 

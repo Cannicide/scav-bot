@@ -54,10 +54,10 @@ class Giveaway {
     schedule(giveaway) {
 
         if (!giveaway) return;
-        if (giveaway.date < Date.now()) return this.draw(giveaway, false);
+        if (new Date(giveaway.date) < new Date()) return this.draw(giveaway, false);
 
         //Execute at proper time
-        var job = schedule.scheduleJob(giveaway.date, this.draw.bind(this, giveaway, false));
+        var job = schedule.scheduleJob(new Date(giveaway.date), this.draw.bind(this, giveaway, false));
         Giveaway.scheduled.set(giveaway.messageID, job);
 
     }
@@ -97,7 +97,7 @@ class Giveaway {
         if (numWinners > users.size) numWinners = users.size;
 
         //Obtain all winners without duplicates
-        while (Object.keys(winners).length != numWinners && Object.keys(winners).length < users.size) {
+        while (winners.size != numWinners && winners.size < users.size) {
             var winner = users.random();
             winners.set(winner.id, winner);
         }
@@ -116,10 +116,10 @@ class Giveaway {
 
         let embed = m.embeds[0];
         embed.description = description;
-        if (!redraw) m.edit(embed);
+        if (!redraw) m.edit({embeds: [embed]});
 
         if (!results.includes(noWinners)) {
-            this.client.util.Message(m).channel().embed({
+            this.client.util.Message(m).Channel().embed({
                 title: `**${giveaway.desc}**`,
                 desc: `${Giveaway.emote.sendable} ${winnersFormatted}\n\n💝 **You won [the giveaway](https://discordapp.com/channels/${m.guild.id}/${m.channel.id}/${m.id})${redraw ? " reroll" : ""}!** 💝`,
                 footer: redraw ? [m.author.username, `${numWinners} redrawn winner(s)`] : [m.author.username],
@@ -253,6 +253,7 @@ module.exports = {
 
                 let system = new Giveaway(slash.client, "giveaway");
                 let giveaway = system.create(slash.getArg("time"), slash.getArg("winners"), slash.getArg("description"), message);
+                message.react(Giveaway.emote.reactable);
                 await system.schedule(giveaway);
 
                 slash.editReply(`Giveaway created!\n${channel.id != slash.channel.id ? "View it [here](" + message.url + ")." : "*Deleting message in (3) seconds...*"}`);

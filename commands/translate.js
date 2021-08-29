@@ -8,6 +8,7 @@ const cheerio = require("cheerio");
 module.exports = new SlashCommand({
   name: "translate",
   desc: "Easily translate text to a specified language using Google Translate!",
+  guilds: JSON.parse(process.env.SLASH_GUILDS),
   args: [
 
     new ArgumentBuilder()
@@ -21,28 +22,29 @@ module.exports = new SlashCommand({
     .setType("string")
     .setOptional(true)
 
-  ]
-}, (slash) => {
+  ],
+  execute(slash) {
 
-  const { text, language } = slash.mappedArgs.toObject();
-  language = language ?? "English";
+    var { text, language } = slash.mappedArgs.toObject();
+    language = language ?? "English";
 
-  slash.deferReply();
+    slash.deferReply();
 
-  fetch(`https://www.google.com/search?q=translate+${text.replace(/ /g, "+")}+to+${language.replace(/ /g, "+")}`)
-  .then(res => res.text())
-  .then(body => {
-    var $ = cheerio.load(body);
+    fetch(`https://www.google.com/search?q=translate+${text.replace(/ /g, "+")}+to+${language.replace(/ /g, "+")}`)
+    .then(res => res.text())
+    .then(body => {
+      var $ = cheerio.load(body);
 
-    var translation = $(".MUxGbd.u31kKd.gsrt.lyLwlc").text();
-    var lang = $('select[aria-label="Select target language"] > option[selected]').attr("value");
+      var translation = $(".MUxGbd.u31kKd.gsrt.lyLwlc").text();
+      var lang = $('select[aria-label="Select target language"] > option[selected]').attr("value");
 
-    slash.editReply(slash.client.util.genEmbeds({
-      desc: `Original: ${text}\n\nTranslation (${lang ? lang : "Unknown"}): ${translation == "" ? "Unable to translate." : translation}`
-    }));
-  })
-  .catch(_err => {
-    slash.editReply("Failed to translate the text; please notify Cannicide#2753.");
-  });
+      slash.editReply(slash.interface.genEmbeds({
+        desc: `Original: ${text}\n\nTranslation (${lang ? lang : "Unknown"}): ${translation == "" ? "Unable to translate." : translation}`
+      }, slash));
+    })
+    .catch(_err => {
+      slash.editReply("Failed to translate the text; please notify Cannicide#2753.");
+    });
 
+  }
 });

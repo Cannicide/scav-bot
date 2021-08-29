@@ -1,5 +1,5 @@
 const ping = require("minecraft-server-util");
-const { SlashCommand } = require("elisif");
+const { SlashCommand, interface } = require("elisif");
 
 function getServerInfo(client, callback, err) {
 
@@ -30,18 +30,19 @@ const stats = new SlashCommand({
     name: "stats",
     desc: "View discord and minecraft server statistics!",
     guilds: JSON.parse(process.env.SLASH_GUILDS),
+    args: [],
     execute(slash) {
 
         slash.deferReply();
 
-        getServerInfo(client, info => {
+        getServerInfo(slash.client, info => {
 
-            var memOnline = slash.guild.members.cache.filter(m => m.presence.status != 'offline').size;
+            var memOnline = slash.guild.members.cache.filter(m => m.presence && m.presence.status != 'offline').size;
             var memTotal = slash.guild.memberCount;
             var memPercent = memOnline / memTotal * 100;
             var mcPercent = info.players / memTotal * 100;
 
-            slash.editReply(slash.client.util.genEmbeds({
+            slash.editReply(slash.interface.genEmbeds({
                 title: "**Statistics**",
                 thumbnail: slash.guild.iconURL({dynamic: true}),
                 fields: [
@@ -54,15 +55,15 @@ const stats = new SlashCommand({
                         value: `Total Member Count: ${memTotal} users\nTotal Online Members: ${memOnline}\nPercent of Members Online: ${Math.round(memPercent)}%`
                     }
                 ]
-            }));
+            }, slash));
 
         }, () => {
 
-            slash.editReply(slash.client.util.genEmbeds({
+            slash.editReply(slash.interface.genEmbeds({
                 desc: "The server appears to be down.",
                 title: "**Statistics**",
                 thumbnail: slash.guild.iconURL({dynamic: true})
-            }));
+            }, slash));
 
         });
 
@@ -76,23 +77,18 @@ function scheduler(client, useRcon) {
 }
 
 var previousName = "";
-function createScheduledChannels(playersOnline, client, wasOnline) {
+async function createScheduledChannels(playersOnline, client, wasOnline) {
 
-    const guild = client.guilds.cache.find(g => g.id == client.setting("stats_guild")); //"351824506773569541"
-    const category = guild ? guild.channels.cache.get(client.setting("stats_category")) : false; //"728978616905367602"
+    const guild = await client.guilds.fetch(client.setting("stats_guild")); //"351824506773569541"
+    const category = guild?.channels.cache.get(client.setting("stats_category")) ?? false; //"728978616905367602"
     var msg = false;
 
     const channelPerms = [
         {
             //@everyone
-            id: "351824506773569541",
+            id: client.setting("stats_everyoneid"),
             deny: ["CONNECT", "SPEAK"],
             allow: ["VIEW_CHANNEL"]
-        },
-        {
-            //@System Administrator
-            id: "627599099184807966",
-            allow: ["CONNECT", "SPEAK"]
         }
     ];
 
@@ -111,7 +107,7 @@ function createScheduledChannels(playersOnline, client, wasOnline) {
         guild.channels.create("IP: " + client.setting("stats_mc_ip"), {
             parent: category,
             permissionOverwrites: channelPerms,
-            type: "voice",
+            type: "GUILD_VOICE",
             reason: "[Statistics]"
         })
         .then(_c => {
@@ -119,16 +115,22 @@ function createScheduledChannels(playersOnline, client, wasOnline) {
             guild.channels.create(msg, {
                 parent: category,
                 permissionOverwrites: channelPerms,
-                type: "voice",
+                type: "GUILD_VOICE",
                 reason: "[Statistics]"
             })
         });
 
         if (playersOnline === false && wasOnline) {
-            client.scav.log(guild, `${client.setting("stats_pingroles")}, the server has gone **offline**!`);
+            client.scav.log(guild, interface.genEmbeds({
+                desc: `${client.setting("stats_pingroles")}, the server has gone **offline**!`,
+                color: "#FF0000"
+            }));
         }
         else if (playersOnline != false && !wasOnline) {
-            client.scav.log(guild, `${client.setting("stats_pingroles")}, the server is back **online**!`);
+            client.scav.log(guild, interface.genEmbeds({
+                desc: `${client.setting("stats_pingroles")}, the server is back **online**!`,
+                color: "#00FF00"
+            }));
         }
 
     }
@@ -138,9 +140,9 @@ function cloneScheduler(client) {
     setInterval(() => {
 
         getServerInfo(client, async (info, wasOnline) => {
-            createScheduledChannels(info.players, client, wasOnline);
-        }, (_err, wasOnline) => {
-            createScheduledChannels(false, client, wasOnline);
+            await createScheduledChannels(info.players, client, wasOnline);
+        }, async (_err, wasOnline) => {
+            await createScheduledChannels(false, client, wasOnline);
         });
 
     }, 1 * 60 * 1000);
@@ -165,7 +167,7 @@ function rconScheduler(client) {
             online = online.split("/")[0];
         }
 
-        createScheduledChannels(online ?? 0, client, true);
+        await createScheduledChannels(online ?? 0, client, true);
     });
 
     rcon.connect()

@@ -7,7 +7,7 @@ module.exports = new SlashCommand({
     name: "reactfix",
     roles: ["System Administrator", "Admin", "Developer", "Mod"],
     guilds: JSON.parse(process.env.SLASH_GUILDS),
-    desc: "Manually add a reaction vote to a suggestion message if that suggestion was sent while the bot was down.",
+    desc: "Manually adds yea and nay emotes to a suggestion message.",
     args: [
         new ArgumentBuilder()
         .setName("message")
@@ -23,7 +23,7 @@ module.exports = new SlashCommand({
     ],
     execute(slash) {
 
-        const { message, channel } = slash.mappedArgs.toObject();
+        var { message, channel } = slash.mappedArgs.toObject();
         channel = channel ?? slash.channel;
 
         slash.deferReply({ ephemeral: true });

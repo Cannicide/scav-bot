@@ -9,22 +9,23 @@ module.exports = new SlashCommand({
     name: "banappeal",
     desc: "Information on how to appeal a ban.",
     guilds: JSON.parse(process.env.SLASH_GUILDS),
+    args: [],
     execute(slash) {
 
         slash.reply(slash.interface.genEmbeds({
             fields: [
                 {
-                    name: "The Ban Appeal Format",
-                    value: `If you have been banned from the server, an appeal can get you unbanned. To appeal your ban, you must create a ban appeal on the Scav Forums, following the appropriate format. The ban appeal format can be found [here](${banFormat}).`
+                    name: "The Big Ban",
+                    value: `If you have been banned from the server, an appeal can get you unbanned. To appeal your ban, you must create a ban appeal on the Scav Forums, in an appropriate and professional manner. More ban appeal information can be found [here](${banFormat}).`
                 },
                 {
-                    name: "Properly Appealing",
-                    value: `Copy the template provided in the ban appeal format. Create a new appeal thread [here](${banThread}) and paste the template. Provide detailed and professional responses to the prompts provided in the template. Afterwards, wait patiently for staff members to review your appeal. Do NOT pester staff to look at your appeal, or your ban may be *extended*.`
+                    name: "The Art of the Appeal",
+                    value: `Create a new appeal thread [here](${banThread}). Provide detailed and professional responses highlighting when and why you were banned, and why you should be unbanned. Afterwards, wait patiently for staff members to review your appeal. Do NOT pester staff to look at your appeal, or your ban may be *extended*.`
                 }
             ],
             title: "Ban Appeals",
             thumbnail
-        }));
+        }, slash));
 
     }
 });

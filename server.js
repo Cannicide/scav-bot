@@ -2,8 +2,8 @@ const { Client, interpreter, /** @type {import("elisif/util/Utility")} */ util }
 
 const client = new Client({
     privilegedIntents: true,
-    name: "Scav Discord Bot",
-    presences: ["Raiding Bases", "KoTH", "FFA", "No McMMO", "/help", "/help", "/help", "/help"],
+    name: "Scav",
+    presences: ["https://scavengercraft.net/", "/help"],
     presenceDuration: 10,
     logs: {
         guildID: "668485643487412234",
@@ -31,12 +31,7 @@ const client = new Client({
 });
 
 //Setup website
-require("./website").setup(Handler.express, client);
-
-//Setup moderation events
-// var moderation = require("./commands/moderation.disabled");
-// moderation.moderation.keepPermabanned(client);
-// moderation.moderation.keepMuted(client);
+require("./website").setup(require("elisif").express, client);
 
 //Log guild joins
 client.on('guildCreate', guild => {
@@ -91,31 +86,12 @@ client.once('ready', () => {
         }
     });
 
-    //Register Sibyll interpreter: [ DISABLED UNTIL RELEASE OF SIBYLL 2.0 - node-elisif sibyll expansion ]
-    // const sibyll = require("./sibyll/sibyll");
-    // interpreter.messages.register({
-    //     identifier: "scav-sibyll",
-    //     filter: (message) => message.guild && message.mentions.members.first() && message.mentions.members.first().id == client.user.id,
-    //     response: (message, args) => {
-    //         var input = args.slice(1);
-
-    //         if (input == "" || input == " " || !input || input.startsWith("<@")) return;
-    //         input = input.replace(/\@/gi, "[@]");
-
-    //         sibyll.respond(input).then((output) => message.reply(output));
-    //     }
-    // });
-
-    //Setup DiscordSRZ [ TO BE REPLACED WITH KATALINA ]
-    // const DiscordSRZ = require("./discordsrz");
-    // DiscordSRZ.initialize(client);
-
     //Setup statistics logger and scheduler
     var statistics = require("./commands/statistics");
     statistics.scheduler(client, false); //No RCON at the moment
 
     //Setup giveaway scheduler
-    require("./commands/giveaway.js").giveawayScheduler(client);
+    new (require("./commands/giveaway.js").Giveaway)(client).import();
 
     //Setup scav properties
     client.scav = {
@@ -126,6 +102,12 @@ client.once('ready', () => {
     };
 
 });
+
+client.setting("stats_guild", "717160493088768020");
+client.setting("stats_category", "753387453108453457");
+client.setting("stats_everyoneid", "717160493088768020");
+client.setting("stats_mc_ip", "scav.tv");
+client.setting("stats_pingroles", "<@&719051504622764142> <@&725875963795341323> <@&735696829701816404> <@&719051815144128565>");
 
 //Added token
 client.login(process.env.TOKEN);

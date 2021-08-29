@@ -20,13 +20,13 @@ module.exports = new SlashCommand({
     .setType("string"),
 
     new ArgumentBuilder()
-    .setName("timezoneA")
+    .setName("timezone1")
     .setDescription("Your timezone, or the one you want to convert from.")
     .setType("string")
     .addChoices(timezones),
 
     new ArgumentBuilder()
-    .setName("timezoneB")
+    .setName("timezone2")
     .setDescription("The goal timezone, or the one you want to convert to.")
     .setType("string")
     .addChoices(timezones)
@@ -34,10 +34,10 @@ module.exports = new SlashCommand({
   ],
   execute(slash) {
 
-    let { time, timezoneA, timezoneB } = slash.mappedArgs.toObject();
+    let { time, timezone1, timezone2 } = slash.mappedArgs.toObject();
     slash.deferReply();
 
-    fetch(`https://google.com/search?q=convert+${time}+${timezoneA}+to+${timezoneB}`)
+    fetch(`https://google.com/search?q=convert+${time}+${timezone1}+to+${timezone2}`)
     .then(res => res.text())
     .then(body => {
       var $ = cheerio.load(body);
@@ -46,9 +46,9 @@ module.exports = new SlashCommand({
 
       if (time == "") time = "Google was unable to convert to that timezone.";
 
-      slash.editReply(slash.client.util.genEmbeds({
+      slash.editReply(slash.interface.genEmbeds({
         desc: `**Time:** ${time}`
-      }));
+      }, slash));
     })
     .catch(_err => {
       slash.editReply("Failed to convert the timezones; please notify Cannicide#2753.");

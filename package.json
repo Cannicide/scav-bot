@@ -1,6 +1,6 @@
 {
   "name": "scav-bot",
-  "version": "3.0.0",
+  "version": "3.0.2",
   "description": "Official discord bot of ScavengerCraft.net",
   "main": "server.js",
   "scripts": {
@@ -8,12 +8,10 @@
     "test": "echo \"No test specified\""
   },
   "dependencies": {
-    "elisif": "3.3.0-dev",
+    "elisif": "3.4.1-dev",
     "minecraft-server-util": "^3.6.0",
     "trello-node-api": "^0.0.8",
     "body-parser": "^1.19.0",
-    "natural": "^2.4.5",
-    "wildcard-named": "^1.1.1",
     "node-schedule": "^1.3.3",
     "cheerio": "^0.22.0",
     "ms": "^2.1.3"

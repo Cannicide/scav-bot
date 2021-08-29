@@ -1,8 +1,8 @@
 //Command to create polls and votes.
 
-const { SlashCommand, interpreter } = require("elisif");
+const { SlashCommand, interpreter, evg: db } = require("elisif");
 const { SubCommandBuilder } = SlashCommand;
-const evg = require("../evg").remodel("reactions");
+const evg = db.remodel("reactions");
 
 const emotes = {
     mc: ["🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯"],
@@ -76,7 +76,7 @@ const polls = {
             //Adds a vote to the specified poll
             var index = interpreter.reactions.get("poll").findIndex(sorted_index);
 
-            var db = evg.root();
+            var db = evg.sqlite();
             var cache = db.get("reactions");
             cache[index].votes[choice] += 1;
 
@@ -95,7 +95,7 @@ const polls = {
             //Removes a vote from the specified poll
             var index = interpreter.reactions.get("poll").findIndex(sorted_index);
 
-            var db = evg.root();
+            var db = evg.sqlite();
             var cache = db.get("reactions");
             cache[index].votes[choice] -= 1;
 
@@ -207,11 +207,11 @@ async function createPoll(slash) {
     var naywords = ["nay", "nah", "no", "nope"];
 
     //Set each variable to its respective value
-    var type = yeawords.includes(choices[0].toLowerCase()) && naywords.includes(choices[1].toLowerCase()) ? "yn" : "mc";
     var question = args[0];
     var channel = args[1];
     var maxChoices = type == "yn" ? 1 : Number(args[2]);
     var choices = args.slice(3);
+    var type = yeawords.includes(choices[0].toLowerCase()) && naywords.includes(choices[1].toLowerCase()) ? "yn" : "mc";
 
     //Double check max choices is less than number of choices and at least 1
     if (maxChoices >= choices.length) maxChoices = choices.length - 1;
@@ -279,7 +279,7 @@ function handleAddVote(reaction, user) {
     var embed = reaction.message.embeds[0];
     embed.fields = polls.gui.createPollDisplay(poll.choices, poll.votes);
 
-    reaction.message.edit(embed);
+    reaction.message.edit({embeds: [embed]});
 
 }
 
@@ -308,7 +308,7 @@ function handleRetractVote(reaction, user) {
     var embed = reaction.message.embeds[0];
     embed.fields = polls.gui.createPollDisplay(poll.choices, poll.votes);
 
-    reaction.message.edit(embed);
+    reaction.message.edit({embeds:[embed]});
 
 }
 
@@ -318,7 +318,7 @@ function pollProgress(slash) {
     //Get sorted_index from args
     var index = slash.varargs.length == 1 ? slash.varargs[0] : false;
 
-    if (index != false && !isNaN(index) && Number(index) < interpreter.reactions.get("poll").array().length && Number(index) >= 0) {
+    if (index !== false && !isNaN(index) && Number(index) < interpreter.reactions.get("poll").array().length && Number(index) >= 0) {
         //An index was properly specified
 
         var poll = polls.fetch(index);
@@ -332,18 +332,18 @@ function pollProgress(slash) {
 
         Object.keys(votes).forEach((key, index) => {
             if (votes[key] > maxVotes) {
-                choice = `${emotes.full[type][index]} (**${poll.choices[index]}**)`;
+                choice = `${emotes.full[type][index]} **${poll.choices[index]}**`;
                 maxVotes = votes[key];
             }
             else if (votes[key] == maxVotes) {
-                choice += ", " + `${emotes.full[type][index]} (**${poll.choices[index]}**)`;
+                choice += ", " + `${emotes.full[type][index]} **${poll.choices[index]}**`;
             }
         });
 
         response = polls.gui.createPollDisplay(poll.choices, votes);
-        response.unshift({name: "Leading", value: choice});
+        response.unshift({name: "Leading", value: "> " + choice + "\n> (" + maxVotes + " votes)"});
 
-        var embed = slash.client.util.genEmbeds({
+        var embed = slash.interface.genEmbeds({
             fields: response,
             title: poll.question
         }, slash);
@@ -363,9 +363,10 @@ async function listPolls(slash) {
     //List all of the current polls (by their sorted_index) - no need for guild checks since only one guild is being used
 
     slash.deferReply();
+    slash.interaction.deferred = true;
 
     var list = interpreter.reactions.get("poll").array();
-    var desc = false;
+    var desc = undefined;
     var fields = [];
     var index = 0;
 
@@ -385,9 +386,8 @@ async function listPolls(slash) {
     };
 
     slash.editReply("Compiled list of polls...");
-    slash.deleteReply(1);
 
-    slash.client.util.buttonPaginator({
+    slash.interface.buttonPaginator({
         message: slash,
         embed,
         elements: fields,
@@ -400,7 +400,7 @@ function endPollByReaction(reaction, user) {
     //Ends a specified poll using the trash reaction
 
     //Remove the reaction
-    reaction.users.cache.array().forEach((u) => {
+    [...reaction.users.cache.values()].forEach((u) => {
         if (u.bot) return;
         reaction.users.remove(u);
     });
@@ -435,21 +435,22 @@ function endPollByReaction(reaction, user) {
     embed.description = `Poll has ended.\n\n${choice} received the majority of votes (${maxVotes}).`;
     embed.fields = [];
 
-    reaction.message.edit(embed);
+    reaction.message.edit({embeds:[embed]});
     reaction.message.reactions.removeAll();
     polls.remove(index);
 
 }
 
-function endPoll(slash) {
+async function endPoll(slash) {
     //Ends a specified poll using its sorted_index
-
-    slash.deferReply({ephemeral: true});
+  
+    await slash.deferReply({ephemeral: true});
+    slash.interaction.deferred = true;
     
     //Get sorted_index from args
     var index = slash.varargs.length == 1 ? slash.varargs[0] : false;
 
-    if (index != false && !isNaN(index) && Number(index) < interpreter.reactions.get("poll").array().length && Number(index) >= 0) {
+    if (index !== false && !isNaN(index) && Number(index) < interpreter.reactions.get("poll").array().length && Number(index) >= 0) {
         //An index was properly specified
 
         if (polls.fetch(index).starter != slash.author.id && !slash.client.util.Member(slash.member).hasPerms("ADMINISTRATOR")) return slash.editReply(`Sorry <!@${slash.author.id}>, you do not have permission to end that poll.`);
@@ -483,7 +484,7 @@ function endPoll(slash) {
             embed.description = `Poll has ended.\n\n${choice} received the majority of votes (${maxVotes}).`;
             embed.fields = [];
 
-            m.edit(embed);
+            m.edit({embeds:[embed]});
             m.reactions.removeAll();
             polls.remove(index);
         });
@@ -494,7 +495,7 @@ function endPoll(slash) {
     else {
         //An index was not properly specified
 
-        slash.editReply("Invalid poll index. Please specify a poll using the number index listed to the left of each poll in `/polls list`.").then(m => m.delete({timeout: 10000}));
+        slash.editReply("Invalid poll index. Please specify a poll using the number index listed to the left of each poll in `/polls list`.");
     }
 
 }
@@ -519,7 +520,7 @@ module.exports = {
                    .setDescription("The channel to post the poll in.") 
                 )
                 .addIntegerArg(arg => 
-                    arg.setName("maxChoices")
+                    arg.setName("maxchoices")
                     .setDescription("The maximum number of choices users can select.")    
                 )
                 .addStringArg(arg =>
