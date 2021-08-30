@@ -42,7 +42,7 @@ const stats = new SlashCommand({
 
         slash.deferReply();
 
-        if (!slash.hasArg()) {
+        if (slash.mappedArgs.size == 0) {
             //Statistics command
             getServerInfo(slash.client, info => {
 
