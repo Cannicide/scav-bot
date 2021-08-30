@@ -248,7 +248,7 @@ module.exports = {
                     title: slash.getArg("description"),
                     footer: [slash.author.username, `${slash.getArg("winners")} winner(s)`],
                     thumbnail: slash.guild.iconURL({dynamic: true}),
-                    desc: `Guild: **[${slash.guild.name}](https://discordapp.com/channels/${slash.guild.id}/${slash.channel.id}/${slash.id})**\nWinners: **${slash.getArg("winners")}**\nEnds: **${Giveaway.getEndTime(slash.getArg("time")).toLocaleDateString()}**\nAt: **${Giveaway.getEndTime(slash.getArg("time")).toLocaleTimeString([], {hour12: true, hour: 'numeric', minute:'2-digit'})} CST**\n\nClick ${Giveaway.emote.sendable} to enter the giveaway!`
+                    desc: `Guild: **[${slash.guild.name}](https://discordapp.com/channels/${slash.guild.id}/${slash.channel.id}/${slash.id})**\nWinners: **${slash.getArg("winners")}**\nEnds: **${Giveaway.getEndTime(slash.getArg("time")).toLocaleDateString()}**\nAt: **${Giveaway.getEndTime(slash.getArg("time")).toLocaleTimeString([], {hour12: true, hour: 'numeric', minute:'2-digit'})} Central**\n\nClick ${Giveaway.emote.sendable} to enter the giveaway!`
                 });
 
                 let system = new Giveaway(slash.client, "giveaway");

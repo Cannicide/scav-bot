@@ -1,5 +1,6 @@
 const ping = require("minecraft-server-util");
 const { SlashCommand, interface } = require("elisif");
+const { ArgumentBuilder } = SlashCommand;
 
 function getServerInfo(client, callback, err) {
 
@@ -30,42 +31,75 @@ const stats = new SlashCommand({
     name: "stats",
     desc: "View discord and minecraft server statistics!",
     guilds: JSON.parse(process.env.SLASH_GUILDS),
-    args: [],
+    args: [
+        new ArgumentBuilder()
+        .setType("boolean")
+        .setName("enablepings")
+        .setDescription("ADMIN ONLY, toggles pings for status logs.")
+        .setOptional(true)
+    ],
     execute(slash) {
 
         slash.deferReply();
 
-        getServerInfo(slash.client, info => {
+        if (!slash.hasArg()) {
+            //Statistics command
+            getServerInfo(slash.client, info => {
 
-            var memOnline = slash.guild.members.cache.filter(m => m.presence && m.presence.status != 'offline').size;
-            var memTotal = slash.guild.memberCount;
-            var memPercent = memOnline / memTotal * 100;
-            var mcPercent = info.players / memTotal * 100;
+                var memOnline = slash.guild.members.cache.filter(m => m.presence && m.presence.status != 'offline').size;
+                var memTotal = slash.guild.memberCount;
+                var memPercent = memOnline / memTotal * 100;
+                var mcPercent = info.players / memTotal * 100;
 
+                slash.editReply(slash.interface.genEmbeds({
+                    title: "**Statistics**",
+                    thumbnail: slash.guild.iconURL({dynamic: true}),
+                    fields: [
+                        {
+                            name: "Minecraft Server",
+                            value: `Players Online: ${info.players}\nPercent of Members Online: ${Math.round(mcPercent)}\nVersion: 1.8.x-1.12.x`
+                        },
+                        {
+                            name: "Discord Server",
+                            value: `Total Member Count: ${memTotal} users\nTotal Online Members: ${memOnline}\nPercent of Members Online: ${Math.round(memPercent)}%`
+                        }
+                    ]
+                }, slash));
+
+            }, () => {
+
+                slash.editReply(slash.interface.genEmbeds({
+                    desc: "The server appears to be down.",
+                    title: "**Statistics**",
+                    thumbnail: slash.guild.iconURL({dynamic: true})
+                }, slash));
+
+            });
+        }
+        else if (slash.member.permissions.has("MANAGE_CHANNELS")) {
+            //Admin "enablepings" command (has permission)
+            if (slash.getArg("enablepings", true)) {
+                slash.client.setting("stats_enablepings", true);
+                slash.editReply(slash.interface.genEmbeds({
+                    desc: "Enabled pings for status logs in the scavenger-logs channel.",
+                    title: "**Statistics**"
+                }, slash));
+            }
+            else {
+                slash.client.setting("stats_enablepings", false);
+                slash.editReply(slash.interface.genEmbeds({
+                    desc: "Disabled pings for status logs in the scavenger-logs channel.",
+                    title: "**Statistics**"
+                }, slash));
+            }
+        }
+        else {
+            //Admin "enablepings" command (no permission)
             slash.editReply(slash.interface.genEmbeds({
-                title: "**Statistics**",
-                thumbnail: slash.guild.iconURL({dynamic: true}),
-                fields: [
-                    {
-                        name: "Minecraft Server",
-                        value: `Players Online: ${info.players}\nPercent of Members Online: ${Math.round(mcPercent)}\nVersion: 1.8.x-1.12.x`
-                    },
-                    {
-                        name: "Discord Server",
-                        value: `Total Member Count: ${memTotal} users\nTotal Online Members: ${memOnline}\nPercent of Members Online: ${Math.round(memPercent)}%`
-                    }
-                ]
+                desc: "You do not have permission to use this command.",
+                title: "**Statistics**"
             }, slash));
-
-        }, () => {
-
-            slash.editReply(slash.interface.genEmbeds({
-                desc: "The server appears to be down.",
-                title: "**Statistics**",
-                thumbnail: slash.guild.iconURL({dynamic: true})
-            }, slash));
-
-        });
+        }
 
     }
 });
@@ -122,12 +156,14 @@ async function createScheduledChannels(playersOnline, client, wasOnline) {
 
         if (playersOnline === false && wasOnline) {
             client.scav.log(guild, interface.genEmbeds({
+                content: client.setting("stats_enablepings") || undefined,
                 desc: `${client.setting("stats_pingroles")}, the server has gone **offline**!`,
                 color: "#FF0000"
             }));
         }
         else if (playersOnline != false && !wasOnline) {
             client.scav.log(guild, interface.genEmbeds({
+                content: client.setting("stats_enablepings") || undefined,
                 desc: `${client.setting("stats_pingroles")}, the server is back **online**!`,
                 color: "#00FF00"
             }));
