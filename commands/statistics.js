@@ -126,8 +126,8 @@ async function createScheduledChannels(playersOnline, client, wasOnline) {
         }
     ];
 
-    if (guild && (playersOnline || playersOnline == 0)) msg = `Players: ${playersOnline}/${guild.memberCount}`;
-    else if (guild && playersOnline == false) msg = `Players: Server Offline :(`;
+    if (guild && (playersOnline || playersOnline === 0)) msg = `Players: ${playersOnline}/${guild.memberCount}`;
+    else if (guild && playersOnline === false) msg = `Players: Server Offline :(`;
 
     if (msg && msg != previousName) {
 
